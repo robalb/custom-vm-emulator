@@ -5,7 +5,9 @@ the code is all defined inside the yan85 package
 ```
 yan85/
   L_ utils.py
-  L_ machine.py      # Machine class, implementing a yan85 virtual machine
+  L_ machine.py      # Machine class, implementing a yan85 virtual machine. 
+                     # the machine does not know anything about disassemblers
+                     # it just executes code.
   L_ disassembler.py # a recursive descent disassembler, that
                        uses the Machine class to emulate the code
                        and understand its flow
