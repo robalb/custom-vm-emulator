@@ -37,6 +37,7 @@ class TrapType(Enum):
     invalid_opcode='invalid_opcode'
     invalid_read='invalid_read'
     invalid_write='invalid_write'
+    invalid_register='invalid_register'
 
 class Instruction:
     opcode: Opcode
@@ -306,20 +307,68 @@ class Machine:
             self.__set_trap(TrapType.invalid_opcode)
 
         elif opcodes[opcode_byte] == Opcode.IMM:
-            print("IMM")
-            pass
+            print("[DEBUG] IMM")
+            self._write_register(
+                    self._get_register(param1_byte),
+                    param2_byte
+                    )
+
         elif opcodes[opcode_byte] == Opcode.ADD:
-            print("ADD")
-            pass
+            print("[DEBUG] ADD")
+            reg1 = self._get_register(param1_byte)
+            reg2 = self._get_register(param2_byte)
+            self._write_register(
+                    reg1,
+                    self._read_register(reg1) +
+                    self._read_register(reg2)
+                    )
+
         elif opcodes[opcode_byte] == Opcode.STK:
-            print("STK")
-            pass
+            print("[DEBUG] STK")
+            #push
+            if param2_byte is not 0:
+                reg2 = self._get_register(param2_byte)
+                #increment stack pointer (stack is not backwards)
+                stack_pointer = self._read_register(Register.s)
+                stack_pointer += 1
+                self._write_register(Register.s, stack_pointer)
+                #write to stack
+                self._write_memory(
+                        stack_pointer,
+                        self._read_register(reg2)
+                        )
+            #pop
+            if param1_byte is not 0:
+                #read from stack
+                reg1 = self._get_register(param1_byte)
+                stack_pointer = self._read_register(Register.s)
+                self._write_register(
+                    reg1,
+                    self._read_memory(stack_pointer)
+                    )
+                #decrement stack pointer (stack is not backwards)
+                self._write_register(Register.s, stack_pointer-1)
+
         elif opcodes[opcode_byte] == Opcode.STM:
-            print("STM")
-            pass
+            print("[DEBUG] STM")
+            reg1 = self._get_register(param1_byte)
+            reg2 = self._get_register(param2_byte)
+            self._write_memory(
+                    self._read_register(reg1),
+                    self._read_register(reg2),
+                    )
+
         elif opcodes[opcode_byte] == Opcode.LDM:
-            print("LDM")
-            pass
+            print("[DEBUG] LDM")
+            reg1 = self._get_register(param1_byte)
+            reg2 = self._get_register(param2_byte)
+            self._write_register(
+                    reg1,
+                    self._read_memory(
+                        self._read_register(reg2)
+                        )
+                    )
+
         elif opcodes[opcode_byte] == Opcode.CMP:
             print("CMP")
             pass
@@ -346,15 +395,28 @@ class Machine:
         """
         return data % 256
 
+    def _get_register(self, byte: int) -> Register:
+        """
+        Return The Register associated to an instruction byte.
+        the byte associated to a register changes with every machine variation.
+
+        If the given byte is not a register,
+        Register.A is returned and the trap bit is set
+        """
+        if byte in self.conf['register_bytes']:
+            return self.conf['register_bytes'][byte]
+        else:
+            self.__set_trap(TrapType.invalid_register)
+            return Register.A
+
+
 
     def _write_memory(self, addr: int, data: int):
         """
         Write a single byte to memory.
-        If the given addr is invalid, 
-        nothing is written and the trap byte is set
 
-        This trap behaviour is known to cause invalid memory states,
-        since it does not allow atomic rollbacks
+        If the given addr is invalid, 
+        nothing is written and the trap bit is set
         """
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address write: {hex(addr)}")
@@ -366,11 +428,9 @@ class Machine:
     def _read_memory(self, addr: int):
         """
         Read a single byte from memory.
-        If the given addr is invalid, 
-        0 is returned and the trap byte is set.
 
-        This trap behaviour is known to cause invalid memory states,
-        since it does not allow atomic rollbacks
+        If the given addr is invalid, 
+        0 is returned and the trap bit is set.
         """
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address read: {hex(addr)}")
