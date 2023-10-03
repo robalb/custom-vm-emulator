@@ -1,7 +1,6 @@
 from .utils import *
 from enum import Enum
 from typing import List, Callable
-from abc import ABC, abstractmethod
 
 class Opcode(Enum):
     IMM="IMM"
@@ -22,72 +21,195 @@ class Register(Enum):
     B='B'
     C='C'
     D='D'
-    s='s'
+    s='s' #stack pointer
     i='i' #instructions counter
-    f='f'
+    f='f' #flags
+
+class Flag(Enum):
+    N='N' #r1 != r2
+    E='E' #r1 == r2
+    Z='Z' #r1 == r2 == 0
+    G='G' #r1 > r2
+    L='L' #r1 < r2
+
+class TrapType(Enum):
+    trap_mode='trap_mode'
+    invalid_opcode='invalid_opcode'
+    invalid_read='invalid_read'
+    invalid_write='invalid_write'
 
 class Instruction:
     opcode: Opcode
     params: List[Param]
     description: str
-    # @abstractmethod
-    # def run(self):
-    #     pass
 
 class Machine:
     #machine virtual memory
     vmem = []
-    #all the configuration that changes in every yan85
-    #machine variation
+    #all the configurations that can change in yan85
+    #machine variations
     conf = {
         'vmem_bytes': 0,
         'code_base_address': 0x0,
         'registers_base_address': 0x400,
         #individual offset of each register from registers base address
-        'A_address': 0x0,
-        'B_address': 0x1,
-        'C_address': 0x2,
-        'D_address': 0x3,
-        's_address': 0x4,
-        'i_address': 0x5,
-        'f_address': 0x6,
+        'registers_address_offset': {
+            Register.A: 0x0,
+            Register.B: 0x1,
+            Register.C: 0x2,
+            Register.D: 0x3,
+            Register.s: 0x4,
+            Register.i: 0x5,
+            Register.f: 0x6,
+        },
         'register_bytes': {
-            0x0: Register.A,
-            0x1: Register.B,
-            0x2: Register.C,
-            0x3: Register.D,
-            0x4: Register.s,
-            0x5: Register.i,
-            0x5: Register.f,
-            },
+            0x1:  Register.A,
+            0x2:  Register.B,
+            0x4:  Register.C,
+            0x8:  Register.D,
+            0x10: Register.s,
+            0x20: Register.i,
+            0x40: Register.f,
+        },
         'opcode_bytes': {
-            0x0: Opcode.IMM,
-            0x1: Opcode.ADD,
-            0x2: Opcode.STK,
-            0x3: Opcode.STM,
-            0x4: Opcode.LDM,
-            0x5: Opcode.CMP,
-            0x6: Opcode.JMP,
-            0x7: Opcode.SYS,
+            0x0:  Opcode.IMM,
+            0x1:  Opcode.ADD,
+            0x2:  Opcode.STK,
+            0x4:  Opcode.STM,
+            0x8:  Opcode.LDM,
+            0x10: Opcode.CMP,
+            0x20: Opcode.JMP,
+            0x40: Opcode.SYS,
+            },
+        'flag_bytes': {
+            0x1:  Flag.N,
+            0x2:  Flag.E,
+            0x4:  Flag.Z,
+            0x8:  Flag.G,
+            0x10: Flag.L
             }
         }
+
     # the machine was halted
     trap_halt = False
+    trap_reason: TrapType|None = None
+    # when true, set trap every time an instruction runs
+    trap_mode_enabled = False
+
+    # this callback is executed every time a trap is reached
+    trap_handler: Callable|None = None
 
     class InstructionIMM(Instruction):
         opcode = Opcode.IMM
-        params = [Param.reg8, Param.reg8]
-        description = "some description"
+        params = [Param.reg8, Param.imm8]
+        description = """
+        IMM(reg, imm)
+            reg = imm
+
+        put the imm byte into reg
+        """
 
     class InstructionADD(Instruction):
         opcode = Opcode.ADD
         params = [Param.reg8, Param.reg8]
-        description = "some description"
+        description = """
+        ADD(reg1, reg2)
+            reg1 = reg1+reg2
+
+        """
+
+    class InstructionSTK(Instruction):
+        opcode = Opcode.STK
+        params = [Param.reg8, Param.reg8]
+        description = """
+        STK(reg1, reg2)
+          if reg2: push(reg2)
+          if reg1: pop(reg1)
+
+          reg1: pop into reg1 if reg1 is not zero
+          reg2: push reg2 if reg2 is not zero
+          if both are set, this acts as a mov from reg2 into reg1
+          Register.s is used as stack pointer:
+              incremented before push
+              decremented after pop,
+        """
+
+    class InstructionSTM(Instruction):
+        opcode = Opcode.STM
+        params = [Param.reg8, Param.reg8]
+        description = """
+        STM(reg1, reg2)
+            [reg1] = reg2
+
+        Put the content of reg2 into the addr stored in reg1.
+        """
+
+    class InstructionLDM(Instruction):
+        opcode = Opcode.LDM
+        params = [Param.reg8, Param.reg8]
+        description = """
+        LTM(reg1, reg2)
+            reg1 = [reg2]
+
+        put into reg1 the byte pointed by reg2
+        """
+
+    class InstructionCMP(Instruction):
+        opcode = Opcode.CMP
+        params = [Param.reg8, Param.reg8]
+        description = """
+        CMP(reg1, reg2)
+            put into Register.f the result of the
+            comparison between reg1 and reg2.
+
+        Flag register content: (bit order may change)
+
+            4 1
+        0000000
+          |||||
+          ||||r1 == r2
+          |||r1 != r2
+          ||r1 == 0 && r2 == 0
+          |r2 < r1
+          r1 < r2
+        """
+
+    class InstructionJMP(Instruction):
+        opcode = Opcode.JMP
+        params = [Param.reg8, Param.imm8]
+        description = """
+        JMP(reg, imm)
+          if imm8 == 0 || Register.f & imm8:
+            Register.i = [reg]
+          
+          reg is a register containing the memory location we
+          want to jump to.
+          imm8 is the bitmask for the flag we want to check.
+          the flag is set when we call cmp, and is inside Register.f 
+        """
+
+    class InstructionSYS(Instruction):
+        opcode = Opcode.SYS
+        params = [Param.reg8, Param.reg8]
+        description = """
+        SYS(reg1, reg2)
+            reg1 is the opcode, reg2 is the param
+            other registers could be accessed for extra params
+            depending on the opcode
+        """
 
     # map every Opcode to an instruction
     instructions = {
             Opcode.IMM: InstructionIMM,
-            Opcode.ADD: InstructionADD
+            Opcode.ADD: InstructionADD,
+            Opcode.IMM: InstructionIMM,
+            Opcode.ADD: InstructionADD,
+            Opcode.STK: InstructionSTK,
+            Opcode.STM: InstructionSTM,
+            Opcode.LDM: InstructionLDM,
+            Opcode.CMP: InstructionCMP,
+            Opcode.JMP: InstructionJMP,
+            Opcode.SYS: InstructionSYS,
             }
 
     def __init__(self, 
@@ -125,25 +247,147 @@ class Machine:
         virtual_mmap(self.vmem, code_bytes, self.conf['code_base_address'])
 
 
-    def halt(self, message, opcode_byte, param1_byte, param2_byte):
-        print(f"Machine Halted! - {message}")
-        print(f"{opcode_byte} {param1_byte} {param2_byte}")
-        self.trap_halt = True
+    def run_loop(self):
+        self.trap_halt = False
+        self.trap_type = None
+
+        while not self.trap_halt:
+            #increment program counter
+            pc = self._read_register(Register.i)
+            pc += 1
+            self._write_register(Register.i, pc)
+            #fetch instruction bytes
+            pc *= 3
+            opcode = self._read_memory(pc)
+            param1 = self._read_memory(pc+1)
+            param2 = self._read_memory(pc+2)
+            #execute fetched instruction
+            self.run_instruction(opcode, param1, param2)
+        self.handle_trap()
+
+
+    def handle_trap(self):
+        # TODO
+        # halt should be handled by a configurable callable.
+        # could be nice to have a debugger class, that takes a
+        # machine, a disassembler, and registers its own halt handler.
+        # it could run in trap mode, taking snapshots of memory at every step
+        print(f"[DEBUG] Machine Halted! - {str(self.trap_type)}")
+        if self.trap_handler is not None:
+            self.trap_handler(self, self.trap_type)
+        else:
+            print("[DEBUG] Execution stopped. No trap handler is set.")
+
+
+    def set_trap_handler(self, handler: Callable|None):
+        """
+        set a callback function that will run when a trap is reached.
+        Set to None to remove.
+        """
+        self.trap_handler = handler
+
 
     def run_instruction(self, opcode_byte, param1_byte, param2_byte):
         """
         This methid takes 3 bytes and interprets them as a yan85 instruction
         Note: ian85 has fixed-size, 3 bytes instructions.
         """
-
         opcodes = self.conf['opcode_bytes']
+
+        print(f"[DEBUG] running: {hex(opcode_byte)} {param1_byte} {param2_byte} ")
+
+        # if machine is in trap mode, set trap regardless of
+        # the instruction that just run
+        if self.trap_mode_enabled:
+            self.__set_trap(TrapType.trap_mode)
+
+        #invalid opcode, set trap
         if opcode_byte not in opcodes:
-            self.halt("invalid opcode", opcode_byte, param1_byte, param2_byte)
-            return
+            self.__set_trap(TrapType.invalid_opcode)
 
-        if opcodes[opcode_byte] == Opcode.IMM:
+        elif opcodes[opcode_byte] == Opcode.IMM:
+            print("IMM")
             pass
-        if opcodes[opcode_byte] == Opcode.ADD:
+        elif opcodes[opcode_byte] == Opcode.ADD:
+            print("ADD")
+            pass
+        elif opcodes[opcode_byte] == Opcode.STK:
+            print("STK")
+            pass
+        elif opcodes[opcode_byte] == Opcode.STM:
+            print("STM")
+            pass
+        elif opcodes[opcode_byte] == Opcode.LDM:
+            print("LDM")
+            pass
+        elif opcodes[opcode_byte] == Opcode.CMP:
+            print("CMP")
+            pass
+        elif opcodes[opcode_byte] == Opcode.JMP:
+            print("JMP")
+            pass
+        elif opcodes[opcode_byte] == Opcode.SYS:
+            print("SYS")
             pass
 
+
+
+    def __set_trap(self, type: TrapType):
+        self.trap_halt = True
+        self.trap_type = type
+
+
+    def __byte(self, data:int):
+        """
+        we are using python Int to simulate c uint8_t,
+        wich off course will have completely different math.
+        We fix it by wrapping every math operation with this modulo.
+        This is easier than using ctypes
+        """
+        return data % 256
+
+
+    def _write_memory(self, addr: int, data: int):
+        """
+        Write a single byte to memory.
+        If the given addr is invalid, 
+        nothing is written and the trap byte is set
+
+        This trap behaviour is known to cause invalid memory states,
+        since it does not allow atomic rollbacks
+        """
+        if addr >= len(self.vmem):
+            print(f"[DEBUG] invalid address write: {hex(addr)}")
+            self.__set_trap(TrapType.invalid_write)
+        else:
+            self.vmem[addr] = self.__byte(data)
+
+
+    def _read_memory(self, addr: int):
+        """
+        Read a single byte from memory.
+        If the given addr is invalid, 
+        0 is returned and the trap byte is set.
+
+        This trap behaviour is known to cause invalid memory states,
+        since it does not allow atomic rollbacks
+        """
+        if addr >= len(self.vmem):
+            print(f"[DEBUG] invalid address read: {hex(addr)}")
+            self.__set_trap(TrapType.invalid_read)
+            return 0
+        else:
+            return self.vmem[addr]
+
+
+    def _write_register(self, reg: Register, data: int):
+        address = self.conf['registers_base_address']
+        address += self.conf['registers_address_offset'][reg]
+        self._write_memory(address, data)
+
+
+    def _read_register(self, reg: Register):
+        address = self.conf['registers_base_address']
+        address += self.conf['registers_address_offset'][reg]
+        return self._read_memory(address)
 

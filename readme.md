@@ -50,7 +50,23 @@ machine.load_code(code_dump)
 print_hexdump(machine.vmem)
 ```
 
+## yan specs
 
+```
+instructions
+
+     LSB
+     |
+aabbcc
+__--^^
+    OP
+  p1
+p2
+
+op = (uint32_t) instruction & ff
+p1 = (uint32_t) instruction >> 0x8 & ff
+p2 = (uint32_t) instruction >> 0x10 & ff
+```
 
 ## references
 

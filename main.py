@@ -1,4 +1,5 @@
-from yan85.machine import Machine, Opcode, Register
+from IPython import embed
+from yan85.machine import Machine, Opcode, Register, TrapType
 from yan85.disassembler import Disassembler
 from yan85.utils import *
 
@@ -47,34 +48,47 @@ code_dump = """
 
 # initialze a yan85 machine
 machine = Machine(
-        vmem_bytes = 1024,
+        vmem_bytes = 1080,
         code_base_address = 0,
         registers_base_address = 0x400,
         register_bytes = {
-            0x0: Register.A,
-            0x1: Register.B,
-            0x2: Register.C,
-            0x3: Register.D,
-            0x4: Register.s,
-            0x5: Register.i,
-            0x5: Register.f,
+            0x10: Register.A,
+            0x20: Register.B,
+            0x2:  Register.C,
+            0x8:  Register.D,
+            0x4:  Register.s,
+            0x40: Register.i,
+            0x1:  Register.f,
+            # 0x0: Register.N,
             },
         opcode_bytes = {
-            0x0: Opcode.IMM,
-            0x1: Opcode.ADD,
-            0x2: Opcode.STK,
-            0x3: Opcode.STM,
-            0x4: Opcode.LDM,
-            0x5: Opcode.CMP,
-            0x6: Opcode.JMP,
-            0x7: Opcode.SYS,
+            0x40: Opcode.IMM,
+            0x1:  Opcode.ADD,
+            0x10: Opcode.STK,
+            0x8:  Opcode.STM,
+            0x2:  Opcode.LDM,
+            0x20: Opcode.CMP,
+            0x4:  Opcode.JMP,
+            0x80: Opcode.SYS,
             }
         )
 
 machine.load_code(code_dump)
 
-print_hexdump(machine.vmem)
+machine.trap_mode_enabled = True
+def handler(machine, type):
+    if type is not TrapType.trap_mode:
+        print(f"some actual error occurred {type}")
+    else:
+        print_hexdump(machine.vmem)
+        input("yandb$: ")
+        machine.run_loop()
 
+
+machine.set_trap_handler(handler)
+machine.run_loop()
+
+# embed()
 #dis = Disassembler(machine)
 
 #yan85 is a simple architecture, and we can emulate it easily.
