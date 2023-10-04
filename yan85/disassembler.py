@@ -24,28 +24,35 @@ class Entity:
         self.address = address
         self.bytes = bytes
 
-    def readable_byte(self):
-        ret = ""
-        data = ''.join([f'0x{b:02X} ' for b in self.bytes])
-        ret += f"{self.address:04X}  ??   {data}"
-        return ret
-    def readable_code(self):
-        """
-        generat a readable string of the entity
-        """
-        opcode = self.instruction.opcode.value
-        p1 = "??"
-        p2 = "??"
-        ret = ""
-        data = f"{opcode}   {p1} {p2}"
-        ret += f"{self.address:04X}  {data}"
-        return ret
-
     def readable(self):
         if self.type == self.Type.byte:
             return self.readable_byte()
         elif self.type == self.Type.code:
             return self.readable_code()
+
+    def readable_byte(self):
+        ret = ""
+        data = ''.join([f'0x{b:02X} ' for b in self.bytes])
+        ret += f"{self.address:04X}  ??   {data}"
+        return ret
+
+    def readable_code(self):
+        """
+        generat a readable string of the entity
+        """
+        opcode = self.instruction.opcode.value
+        params_str = ["??", "??"]
+        for i in range(len(self.instruction.params)):
+            if type(self.params[i]) is int:
+                params_str[i] = hex(self.params[i])
+            elif type(self.params[i]) is Register:
+                reg_str = self.params[i].value
+                params_str[i] = reg_str
+
+
+
+        data = f"{opcode}   {params[0]} {params[1]}"
+        return f"{self.address:04X}  {data}"
 
 
 
