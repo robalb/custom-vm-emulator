@@ -77,6 +77,7 @@ machine = Machine(
 
 machine.load_code(code_dump)
 
+# print(hexdump(machine.vmem))
 debugger = Debugger(machine)
 
 

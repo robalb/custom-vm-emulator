@@ -1,6 +1,7 @@
-from .tui_interface import DebuggerTUI, Info
+from .tui_interface import DebuggerTUI, Info, HexDumpLine, Code
 from ..machine import Machine, Opcode, Register, TrapType
 from ..disassembler import Disassembler
+from ..utils import hexdump
 
 class Debugger:
 
@@ -53,6 +54,7 @@ class Debugger:
         res += f"f:{hex(reg)}  "
         reg = self.machine._read_register(Register.s)
         res += f"s:{hex(reg)}  "
+        res += "       (s: step   r: reverse step   ctrl+c: quit)"
         self.tui.query_one(Info).txt = res
     
     def print(self, msg):
@@ -62,7 +64,8 @@ class Debugger:
         pass
 
     def update_hexdump(self):
-        pass
+        dump = hexdump(self.machine.vmem)
+        self.tui.query_one(HexDumpLine).dump = dump
 
     def stepi_callback(self):
         self.machine.run_loop()

@@ -7,6 +7,10 @@ from typing import Callable
 
 class HexDumpLine(Static):
     """todo"""
+    dump = reactive(".\n. No data\n" + ".\n"*150)
+
+    def render(self)->str:
+        return f"{self.dump}"
 
 class CodeLine(Static):
     """todo"""
@@ -20,13 +24,15 @@ class HexDump(Static):
       dock: left;
     }
     """
+
     def compose(self) -> ComposeResult:
-        list = [
-            HexDumpLine(
-                    f"{i} 0170    00 40 02 85 08 02 08 40 10 80 40 20 00 80 20 08    .@.....@..@ .. ."
-                    ) for i in range(100)
-            ]
-        yield ScrollableContainer(*list)
+        # list = [
+        #     HexDumpLine(
+        #             f"{i} 0170    00 40 02 85 08 02 08 40 10 80 40 20 00 80 20 08    .@.....@..@ .. ."
+        #             ) for i in range(100)
+        #     ]
+        # yield ScrollableContainer(*list)
+        yield ScrollableContainer(HexDumpLine())
 
 class Code(Static):
     DEFAULT_CSS = """
