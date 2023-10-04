@@ -72,3 +72,6 @@ p2 = (uint32_t) instruction >> 0x10 & ff
 
 python packages:
 https://docs.python.org/3/tutorial/modules.html#packages
+
+urwid widgets
+https://urwid.org/manual/widgets.html#included-widgets
