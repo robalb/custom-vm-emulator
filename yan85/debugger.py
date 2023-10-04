@@ -73,12 +73,6 @@ class Info(Static):
     }
     """
 
-    txt = reactive("press i to start")
-
-    def render(self)->str:
-        return f" {self.txt}"
-
-
 
 class Debugger(App):
     """A Textual app to manage stopwatches."""
@@ -101,7 +95,7 @@ class Debugger(App):
 
     def action_stepi(self) -> None:
         self.count += 1
-        self.query_one(Info).txt = f"{self.count}"
+        self.info_text = f"{self.count}"
         pass
 
 
