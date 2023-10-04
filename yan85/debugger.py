@@ -1,6 +1,8 @@
 from textual.app import App, ComposeResult
 from textual.containers import ScrollableContainer, Horizontal
 from textual.widgets import Button, Footer, Header, Static
+from textual.reactive import reactive
+from utils import *
 
 class HexDumpLine(Static):
     """todo"""
@@ -71,25 +73,36 @@ class Info(Static):
     }
     """
 
+    txt = reactive("press i to start")
+
+    def render(self)->str:
+        return f" {self.txt}"
+
+
 
 class Debugger(App):
     """A Textual app to manage stopwatches."""
 
-    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
+    BINDINGS = [("d", "toggle_dark", "Toggle dark mode"),
+                ("s", "stepi", "step instruction")]
     CSS_PATH = "debugger_styles.tcss"
+
+    count = 0
+    info_text = reactive("i: 0x12 (i*3 = 0x322)  A=0x1 B C D s f ")
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        yield Info("i: 0x12 (i*3 = 0x322)  A=0x1 B C D s f ")
+        yield Info(self.info_text)
         yield Columns()
-        # yield Horizontal(
-        #         HexDump(),
-        #         Code()
-        #         )
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         self.dark = not self.dark
+
+    def action_stepi(self) -> None:
+        self.count += 1
+        self.query_one(Info).txt = f"{self.count}"
+        pass
 
 
 if __name__ == "__main__":
