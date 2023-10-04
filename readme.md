@@ -75,3 +75,6 @@ https://docs.python.org/3/tutorial/modules.html#packages
 
 urwid widgets
 https://urwid.org/manual/widgets.html#included-widgets
+
+                    "0170    00 40 02 85 08 02 08 40 10 80 40 20 00 80 20 08    .@.....@..@ .. .",
+                    "|| /--- 01CE  04 18 08  ??    04 24 08     JMP Invalid Register",

@@ -88,6 +88,7 @@ def handler(machine, type):
 
 # machine.set_trap_handler(handler)
 # machine.run_loop()
+#print_hexdump(machine.vmem)
 
 # embed()
 dis = Disassembler(machine)
