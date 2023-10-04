@@ -2,6 +2,7 @@ from IPython import embed
 from yan85.machine import Machine, Opcode, Register, TrapType
 from yan85.disassembler import Disassembler
 from yan85.utils import *
+from yan85.debugger.core import Debugger
 
 code_dump = """
 40 40 b1 40 20 01 01 20 04 40 08 49 10 00 08 40
@@ -76,14 +77,17 @@ machine = Machine(
 
 machine.load_code(code_dump)
 
-machine.trap_mode_enabled = True
-def handler(machine, type):
-    if type is not TrapType.trap_mode:
-        print(f"some actual error occurred {type}")
-    else:
-        # print_hexdump(machine.vmem)
-        input("yandb$: ")
-        machine.run_loop()
+debugger = Debugger(machine)
+
+
+# machine.trap_mode_enabled = True
+# def handler(machine, type):
+#     if type is not TrapType.trap_mode:
+#         print(f"some actual error occurred {type}")
+#     else:
+#         # print_hexdump(machine.vmem)
+#         input("yandb$: ")
+#         machine.run_loop()
 
 
 # machine.set_trap_handler(handler)
@@ -91,7 +95,7 @@ def handler(machine, type):
 #print_hexdump(machine.vmem)
 
 # embed()
-dis = Disassembler(machine)
+# dis = Disassembler(machine)
 
 #yan85 is a simple architecture, and we can emulate it easily.
 #therefore we can implement a recursive descent disassembler

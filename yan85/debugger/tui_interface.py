@@ -2,7 +2,8 @@ from textual.app import App, ComposeResult
 from textual.containers import ScrollableContainer, Horizontal
 from textual.widgets import Button, Footer, Header, Static
 from textual.reactive import reactive
-from utils import *
+from ..utils import *
+from typing import Callable
 
 class HexDumpLine(Static):
     """todo"""
@@ -73,20 +74,32 @@ class Info(Static):
     }
     """
 
+    txt = reactive("Debugger ready.   s: step   c: context   r: reverse step")
 
-class Debugger(App):
+    def render(self)->str:
+        return f" {self.txt}"
+
+
+
+class DebuggerTUI(App):
     """A Textual app to manage stopwatches."""
 
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode"),
-                ("s", "stepi", "step instruction")]
-    CSS_PATH = "debugger_styles.tcss"
+                ("s", "stepi", "step instruction"),
+                ("r", "reverse_stepi", "step one instruction back in time"),
+                ("c", "context", "print context"),
+                ]
+    CSS_PATH = "styles.tcss"
 
     count = 0
-    info_text = reactive("i: 0x12 (i*3 = 0x322)  A=0x1 B C D s f ")
+    stepi_callback: None|Callable = None
+    reverse_stepi_callback = None
+    context_callback = None
+
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        yield Info(self.info_text)
+        yield Info()
         yield Columns()
 
     def action_toggle_dark(self) -> None:
@@ -94,11 +107,17 @@ class Debugger(App):
         self.dark = not self.dark
 
     def action_stepi(self) -> None:
-        self.count += 1
-        self.info_text = f"{self.count}"
+        """step instruction"""
+        if self.stepi_callback is not None:
+            self.stepi_callback()
+        # self.count += 1
+        # self.query_one(Info).txt = f"{self.count}"
+
+    def action_reverse_stepi(self) -> None:
+        """reverse step instruction"""
         pass
 
+    def action_context(self) -> None:
+        """print context"""
+        pass
 
-if __name__ == "__main__":
-    app = Debugger()
-    app.run()
