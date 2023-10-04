@@ -37,8 +37,23 @@ class Debugger:
             self.update_code()
 
     def update_info(self):
+        res = ""
         reg = self.machine._read_register(Register.i)
-        self.tui.query_one(Info).txt = f"i: {hex(reg)}"
+        res += f"i:{hex(reg)}  i*3:{hex(reg*3)}  "
+
+        reg = self.machine._read_register(Register.A)
+        res += f"A:{hex(reg)}  "
+        reg = self.machine._read_register(Register.B)
+        res += f"B:{hex(reg)}  "
+        reg = self.machine._read_register(Register.C)
+        res += f"C:{hex(reg)}  "
+        reg = self.machine._read_register(Register.D)
+        res += f"D:{hex(reg)}  "
+        reg = self.machine._read_register(Register.f)
+        res += f"f:{hex(reg)}  "
+        reg = self.machine._read_register(Register.s)
+        res += f"s:{hex(reg)}  "
+        self.tui.query_one(Info).txt = res
     
     def print(self, msg):
         self.tui.query_one(Info).txt = msg
