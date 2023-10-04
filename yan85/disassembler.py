@@ -1,6 +1,7 @@
 from .machine import Machine, Param, Opcode, Register, Instruction
 from enum import Enum
 from typing import List
+from .utils import *
 
 class Entity:
     class Type(Enum):
@@ -32,8 +33,10 @@ class Entity:
 
     def readable_byte(self):
         ret = ""
-        data = ''.join([f'0x{b:02X} ' for b in self.bytes])
-        ret += f"{self.address:04X}  ??   {data}"
+        bytes = ''.join([f'{b:02X} ' for b in self.bytes])
+        readable_bytes = ''.join([f'{b:02} ' for b in self.bytes])
+        ret += f"{self.address:04X}  {DARK_GRAY}{bytes}{RESET_COLOR} ??    {DARK_GRAY}{readable_bytes}{RESET_COLOR}"
+        ret += f"    {DARK_GRAY}{self.line_comment}{RESET_COLOR}"
         return ret
 
     def readable_code(self):
@@ -42,17 +45,22 @@ class Entity:
         """
         opcode = self.instruction.opcode.value
         params_str = ["??", "??"]
+        bytes = ''.join([f'{b:02X} ' for b in self.bytes])
         for i in range(len(self.instruction.params)):
-            if type(self.params[i]) is int:
-                params_str[i] = hex(self.params[i])
-            elif type(self.params[i]) is Register:
-                reg_str = self.params[i].value
-                params_str[i] = reg_str
+            param = self.params[i]
+            if isinstance(param, int):
+                params_str[i] = hex(param)
+            elif isinstance(param, Register):
+                params_str[i] = param.value
+                if param == Register.N:
+                    params_str[i] = f"{DARK_GRAY}N{RESET_COLOR}"
 
 
 
-        data = f"{opcode}   {params[0]} {params[1]}"
-        return f"{self.address:04X}  {data}"
+        data = f"{DARK_GRAY}{bytes}{RESET_COLOR} {opcode}   {params_str[0]} {params_str[1]}"
+        ret = f"{self.address:04X}  {data}"
+        ret += f"    {DARK_GRAY}{self.line_comment}{RESET_COLOR}"
+        return ret
 
 
 
@@ -84,7 +92,7 @@ class Disassembler:
         while len(self.instr_stack) > 0:
             #pop an instruction from the stack
             instr_addr = self.instr_stack.pop()
-            self.disass_instruction(instr_addr)
+            self.disass_sweep(instr_addr)
 
 
     def _byte_at(self, addr):
@@ -105,8 +113,20 @@ class Disassembler:
         else:
             return self.machine.conf['register_bytes'][param_byte]
 
+    def disass_sweep(self, instr_addr):
+        entity = self.disass_instruction(instr_addr)
+        print(entity.readable())
+        #associate the instruction entity to the current instruction
+        self.vmem_mapping[instr_addr] = entity
+        # if the entity is an instruction
+        if entity.type == Entity.Type.code:
+            #add the next instruction to the stack, since this is a linear sweep
+            #TODO: do this in a new function
+            if instr_addr+3 < len(self.machine.vmem):
+                self.instr_stack.append(instr_addr+3)
 
-    def disass_instruction(self, instr_addr):
+
+    def disass_instruction(self, instr_addr) -> Entity:
         instr_bytes = [
             self._byte_at(instr_addr),
             self._byte_at(instr_addr+1),
@@ -115,7 +135,7 @@ class Disassembler:
         # print(f"[DEBUG] disass {hex(instr_addr)}: {hex(instr_bytes[0])} {hex(instr_bytes[1])} {hex(instr_bytes[2])}")
 
         instruction = self._get_instructionClass(instr_bytes[0])
-        is_data = False
+        disass_error = ""
         instr_entity = Entity(
             Entity.Type.code,
             instr_addr,
@@ -123,20 +143,21 @@ class Disassembler:
             )
 
         if instruction is None:
-            is_data = True
-            #TODO. set the 3 bytes as data
+            # Invalid instruction
+            disass_error = "Invalid Opcode"
         else:
+            # Disassemble generic instruction
             instr_entity.instruction = instruction
-            #validate params
             params_as_reg = [
                 self._get_register(instr_bytes[1]),
                 self._get_register(instr_bytes[2]),
             ]
+            # validate params
             for i in range(len(instruction.params)):
                 if instruction.params[i] == Param.reg8:
                     #handle register params
                     if params_as_reg[i] is None:
-                        is_data = True
+                        disass_error = f"{instruction.opcode.value} Invalid Register"
                         break
                     else:
                         instr_entity.params[i] = params_as_reg[i]
@@ -144,22 +165,36 @@ class Disassembler:
                     #handle data params
                     instr_entity.params[i] = instr_bytes[i]
 
-        
-        if is_data:
-            self.vmem_mapping[instr_addr] = Entity(
+        #handle instruction comments
+        if instr_entity.instruction.opcode == Opcode.STK:
+            p1 = instr_entity.params[0]
+            p2 = instr_entity.params[1]
+            if isinstance(p1, Register) and isinstance(p2, Register):
+                if p1 == Register.N and p2 == Register.N:
+                    comment = "nop"
+                elif p2 == Register.N:
+                    comment = f"pop {p1.value}"
+                elif p1 == Register.N:
+                    comment = f"push {p2.value}"
+                else:
+                    comment = f"{p1.value} = {p2.value}"
+                instr_entity.line_comment = comment
+        if instr_entity.instruction.opcode == Opcode.IMM:
+            #TODO: put ascii value in comment if its a readable ascii value
+            pass
+
+
+        #handle invalid instructions
+        if len(disass_error) > 0:
+            byte_entity = Entity(
                     Entity.Type.byte,
                     instr_addr,
                     instr_bytes
                     )
-            print( self.vmem_mapping[instr_addr].readable())
+            byte_entity.line_comment = disass_error
+            return byte_entity
         else:
-            #associate the instruction entity to the current instruction
-            self.vmem_mapping[instr_addr] = instr_entity
-            print(instr_entity.readable())
-        #add the next instruction to the stack, since this is a linear sweep
-        #TODO: do this in a new function
-        if instr_addr+3 < len(self.machine.vmem):
-            self.instr_stack.append(instr_addr+3)
+            return instr_entity
 
 
 

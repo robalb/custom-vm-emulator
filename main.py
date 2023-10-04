@@ -52,6 +52,7 @@ machine = Machine(
         code_base_address = 0,
         registers_base_address = 0x400,
         register_bytes = {
+            0x0:  Register.N,
             0x10: Register.A,
             0x20: Register.B,
             0x2:  Register.C,

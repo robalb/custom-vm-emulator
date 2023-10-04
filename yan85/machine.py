@@ -24,6 +24,7 @@ class Register(Enum):
     s='s' #stack pointer
     i='i' #instructions counter
     f='f' #flags
+    N='N' #no register
 
 class Flag(Enum):
     N='N' #r1 != r2
@@ -64,6 +65,7 @@ class Machine:
             Register.f: 0x6,
         },
         'register_bytes': {
+            0x0:  Register.N,
             0x1:  Register.A,
             0x2:  Register.B,
             0x4:  Register.C,
