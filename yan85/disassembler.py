@@ -7,14 +7,13 @@ class Entity:
     class Type(Enum):
         code="CODE"
         byte="BYTE"
-
     type:Type = Type.byte
     xrefs = []
     line_comment = ""
     plate_comment = ""
     bytes = [0]
     address = 0
-
+    #instruction only parameters
     instruction: Instruction
     params: List[Register|int|None] = [None, None]
     dynamic_branches=False
@@ -180,8 +179,9 @@ class Disassembler:
                     comment = f"{p1.value} = {p2.value}"
                 instr_entity.line_comment = comment
         if instr_entity.instruction.opcode == Opcode.IMM:
-            #TODO: put ascii value in comment if its a readable ascii value
-            pass
+            p2 = instr_entity.params[1]
+            if isinstance(p2, int) and p2 >= ord(' ') and p2 <= ord('~'):
+                instr_entity.line_comment = f"'{chr(p2)}'"
 
 
         #handle invalid instructions
