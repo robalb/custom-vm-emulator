@@ -22,6 +22,7 @@ class Debugger:
         # init TUI
         self.tui = DebuggerTUI()
         self.tui.stepi_callback = self.stepi_callback
+        self.tui.context_callback = self.context_callback
 
         # launch the TUI
         self.tui.run()
@@ -29,14 +30,18 @@ class Debugger:
 
     def trap_handler(self, type: TrapType):
             if type is not TrapType.trap_mode:
-                print(f"some actual error occurred {type}")
+                self.print(f" Error: {type.value} (c to print context)")
             else:
-                # update info
-                reg = self.machine._read_register(Register.i)
-                self.tui.query_one(Info).txt = f"i: {hex(reg)}"
+                self.update_info()
+            self.update_hexdump()
+            self.update_code()
 
     def update_info(self):
-        pass
+        reg = self.machine._read_register(Register.i)
+        self.tui.query_one(Info).txt = f"i: {hex(reg)}"
+    
+    def print(self, msg):
+        self.tui.query_one(Info).txt = msg
 
     def update_code(self):
         pass
@@ -46,4 +51,7 @@ class Debugger:
 
     def stepi_callback(self):
         self.machine.run_loop()
+
+    def context_callback(self):
+        self.update_info()
 

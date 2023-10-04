@@ -93,8 +93,8 @@ class DebuggerTUI(App):
 
     count = 0
     stepi_callback: None|Callable = None
-    reverse_stepi_callback = None
-    context_callback = None
+    reverse_stepi_callback: None|Callable = None
+    context_callback: None|Callable = None
 
 
     def compose(self) -> ComposeResult:
@@ -119,5 +119,6 @@ class DebuggerTUI(App):
 
     def action_context(self) -> None:
         """print context"""
-        pass
+        if self.context_callback is not None:
+            self.context_callback()
 
