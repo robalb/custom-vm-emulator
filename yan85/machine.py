@@ -253,15 +253,14 @@ class Machine:
         self.trap_type = None
 
         while not self.trap_halt:
-            #increment program counter
-            pc = self._read_register(Register.i)
-            pc += 1
-            self._write_register(Register.i, pc)
             #fetch instruction bytes
+            pc = self._read_register(Register.i)
             pc *= 3
             opcode = self._read_memory(pc)
             param1 = self._read_memory(pc+1)
             param2 = self._read_memory(pc+2)
+            #increment program counter
+            self._write_register(Register.i, pc+1)
             #execute fetched instruction
             self.run_instruction(opcode, param1, param2)
         self.handle_trap()
@@ -295,7 +294,7 @@ class Machine:
         """
         opcodes = self.conf['opcode_bytes']
 
-        print(f"[DEBUG] running: {hex(opcode_byte)} {param1_byte} {param2_byte} ")
+        print(f"[DEBUG] running: {hex(opcode_byte)} {hex(param1_byte)} {hex(param2_byte)} ")
 
         # if machine is in trap mode, set trap regardless of
         # the instruction that just run

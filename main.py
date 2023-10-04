@@ -80,16 +80,16 @@ def handler(machine, type):
     if type is not TrapType.trap_mode:
         print(f"some actual error occurred {type}")
     else:
-        print_hexdump(machine.vmem)
+        # print_hexdump(machine.vmem)
         input("yandb$: ")
         machine.run_loop()
 
 
-machine.set_trap_handler(handler)
-machine.run_loop()
+# machine.set_trap_handler(handler)
+# machine.run_loop()
 
 # embed()
-#dis = Disassembler(machine)
+dis = Disassembler(machine)
 
 #yan85 is a simple architecture, and we can emulate it easily.
 #therefore we can implement a recursive descent disassembler
