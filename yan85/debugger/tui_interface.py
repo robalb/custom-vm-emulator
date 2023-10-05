@@ -4,16 +4,56 @@ from textual.widgets import Button, Footer, Header, Static
 from textual.reactive import reactive
 from ..utils import *
 from typing import Callable
+from rich.text import Text
 
 class HexDumpLine(Static):
     """todo"""
-    dump = reactive(".\n. No data\n" + ".\n"*150)
+    data = reactive([0]*1500)
 
-    def render(self)->str:
-        return f"{self.dump}"
+    def generate_hexdump(self):
+        data = self.data
+        pad = "    "
+        ret = Text()
+        for i in range(0, len(data), 16):
+            hex_vals = []
+            ascii_vals = []
+
+            for j in range(i, min(i + 16, len(data))):
+                val = data[j]
+                if val == 0:
+                    hex_vals.append(Text("..", style="gray"))
+                else:
+                    hex_vals.append(f"{val:02X}")
+                ascii_vals.append(chr(val) if ord(' ') <= val <= ord('~') else ".")
+
+            hex_padding = ""
+            if(len(hex_vals) < 16):
+                hex_padding = " __" * (16 - len(hex_vals))
+
+            ret.append(f"{i:04X}{pad}")
+            ret.append(Text("..", style="red"))
+            # ret.append(Text.assemble(
+            #         f"{i:04X}{pad}",
+            #         (" ".join(hex_vals) + hex_padding + pad),
+            #         ("".join(ascii_vals)),
+            #         "\n",
+            #         ))
+        return Text("..", style="red")
+
+    def render(self)->Text:
+        return self.generate_hexdump()
+
 
 class CodeLine(Static):
     """todo"""
+    txt = reactive([0]*150)
+
+    def process_data(self):
+        arr = [f"{d}\n" for d in self.txt]
+        return " ".join(arr)
+
+    def render(self)->str:
+        return self.process_data()
 
 
 class HexDump(Static):
@@ -26,13 +66,9 @@ class HexDump(Static):
     """
 
     def compose(self) -> ComposeResult:
-        # list = [
-        #     HexDumpLine(
-        #             f"{i} 0170    00 40 02 85 08 02 08 40 10 80 40 20 00 80 20 08    .@.....@..@ .. ."
-        #             ) for i in range(100)
-        #     ]
-        # yield ScrollableContainer(*list)
-        yield ScrollableContainer(HexDumpLine())
+        yield ScrollableContainer(
+                HexDumpLine())
+
 
 class Code(Static):
     DEFAULT_CSS = """
@@ -42,18 +78,11 @@ class Code(Static):
       dock: right;
     }
     """
-
     def compose(self) -> ComposeResult:
-        list = [
-            CodeLine(
-            f"{i}|| /--- 01CE  04 18 08  ??    04 24 08     JMP Invalid Register",
-            ) for i in range(80)
-                ]
-        yield ScrollableContainer(*list)
+        yield ScrollableContainer(CodeLine())
 
 
 class Columns(Static):
-
     DEFAULT_CSS = """
     Columns {
       layout: horizontal;
@@ -61,14 +90,12 @@ class Columns(Static):
       min-width: 70;
     }
     """
-
     def compose(self) -> ComposeResult:
         yield HexDump()
         yield Code()
 
-class Info(Static):
-    """aaa"""
 
+class Info(Static):
     DEFAULT_CSS = """
     Info {
         dock: bottom;

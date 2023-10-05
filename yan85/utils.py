@@ -36,34 +36,6 @@ def virtual_mmap(virtual_mem_ref, array_ref, N):
         print("cannot perform mmap, the target position is out of range")
 
 
-def hexdump(data):
-    ret = ""
-    pad = "    "
-    DARK_GRAY =""
-    RESET_COLOR=""
-    for i in range(0, len(data), 16):
-        hex_vals = []
-        ascii_vals = []
-
-        for j in range(i, min(i + 16, len(data))):
-            val = data[j]
-            if val == 0:
-                hex_vals.append(f"{DARK_GRAY}..{RESET_COLOR}")
-            else:
-                hex_vals.append(f"{val:02X}")
-            ascii_vals.append(chr(val) if ord(' ') <= val <= ord('~') else ".")
-
-        hex_padding = ""
-        if(len(hex_vals) < 16):
-            hex_padding = " __" * (16 - len(hex_vals))
-
-        ret += f"{i:04X}{pad}" 
-        ret += " ".join(hex_vals) + hex_padding + pad
-        ret += "".join(ascii_vals)
-        ret += "\n"
-    return ret
-
-
 def print_hexdump(data):
     for i in range(0, len(data), 16):
         hex_vals = []

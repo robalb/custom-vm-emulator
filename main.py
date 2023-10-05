@@ -61,7 +61,6 @@ machine = Machine(
             0x4:  Register.s,
             0x40: Register.i,
             0x1:  Register.f,
-            # 0x0: Register.N,
             },
         opcode_bytes = {
             0x40: Opcode.IMM,

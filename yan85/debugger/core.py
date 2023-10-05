@@ -1,7 +1,7 @@
-from .tui_interface import DebuggerTUI, Info, HexDumpLine, Code
+from .tui_interface import DebuggerTUI, Info, HexDumpLine, CodeLine
 from ..machine import Machine, Opcode, Register, TrapType
 from ..disassembler import Disassembler
-from ..utils import hexdump
+# from ..utils import hexdump
 
 class Debugger:
 
@@ -61,11 +61,10 @@ class Debugger:
         self.tui.query_one(Info).txt = msg
 
     def update_code(self):
-        pass
+        self.tui.query_one(CodeLine).txt = [1]*100
 
     def update_hexdump(self):
-        dump = hexdump(self.machine.vmem)
-        self.tui.query_one(HexDumpLine).dump = dump
+        self.tui.query_one(HexDumpLine).data = self.machine.vmem[::]
 
     def stepi_callback(self):
         self.machine.run_loop()
