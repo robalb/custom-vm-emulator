@@ -159,6 +159,7 @@ class Disassembler:
                 self._get_register(instr_bytes[2]),
             ]
             # validate params
+            # TODO: rewrite this block, it hsa a bug in the way it orders params
             for i in range(len(instruction.params)):
                 if instruction.params[i] == Param.reg8:
                     #handle register params

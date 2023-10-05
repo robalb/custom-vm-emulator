@@ -41,7 +41,42 @@ class HexDumpLine(Static):
 
 class CodeLine(Static):
     """todo"""
-    txt = reactive(".\n"*400)
+    default = """
+ ______________________
+(0RGSDOFCJftli;:.:. .  )
+ T====================T
+ |.;....,..........;..|
+ |;;:: .  .    .      |
+ l;;;:. :   .     ..  ;
+ `;;:::.: .    .     .'
+  l;;:. ..  .     .: ;
+  `;;::.. .    .  ; .'
+   l;;:: .  .    /  ;
+    \\;;:. .   .,'  /
+     `\\;:.. ..'  .'
+       `\\;:.. ..'
+         \\;:. /
+          l; f
+          `;f'
+           ||
+           ;l.
+          ;: l
+         / ;  \\
+       ,/  :   `.
+     ./' . :     `.
+    /' ,'  :       \\
+   f  /  . :        i
+  ,' ;  .  :        `.
+  f ;  .   :      .  i
+ .'    :   :       . `.
+ f ,  .    ;       :  i
+ |    :  ,/`.       : |
+ |    ;,/;:. `.     . |
+ |___,/;;:. . .`._____|
+(QB0ZDOLC7itz!;:.:. .  )
+ =====================-
+"""
+    txt = reactive(default + ".\n"*350)
     def render(self)->Text:
         return Text.from_ansi(self.txt)
 
@@ -60,6 +95,9 @@ class HexDump(Static):
                 HexDumpLine())
 
 
+class CodeScroll(ScrollableContainer):
+    """"""
+
 class Code(Static):
     DEFAULT_CSS = """
     Code {
@@ -69,7 +107,7 @@ class Code(Static):
     }
     """
     def compose(self) -> ComposeResult:
-        yield ScrollableContainer(CodeLine())
+        yield CodeScroll(CodeLine())
 
 
 class Columns(Static):

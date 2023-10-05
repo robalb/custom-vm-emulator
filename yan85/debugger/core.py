@@ -1,4 +1,4 @@
-from .tui_interface import DebuggerTUI, Info, HexDumpLine, CodeLine
+from .tui_interface import DebuggerTUI, Info, HexDumpLine, CodeLine, CodeScroll
 from ..machine import Machine, Opcode, Register, TrapType
 from ..disassembler import Disassembler
 # from ..utils import hexdump
@@ -8,6 +8,10 @@ class Debugger:
     tui: DebuggerTUI
     machine: Machine
     disassembler: Disassembler
+
+    #scroll effect: 0= disabled, 1= follow jumps, 2 follow cursor
+    scroll_effect = 1
+    previous_line = 0
 
     def __init__(self, machine: Machine):
         #init machine
@@ -38,6 +42,7 @@ class Debugger:
             self.update_hexdump()
             self.update_code()
 
+
     def update_info(self):
         res = ""
         reg = self.machine._read_register(Register.i)
@@ -62,9 +67,31 @@ class Debugger:
         self.tui.query_one(Info).txt = msg
 
     def update_code(self):
-
         txt = self.disassembler.disassemble()
         self.tui.query_one(CodeLine).txt = txt
+
+        # scroll
+        line = self.machine._read_register(Register.i)
+        sub = 2
+        if sub > line:
+            sub = 0
+
+        # scroll effect 1: follow jumps
+        # scroll only when there is a jump
+        if self.scroll_effect == 1:
+            scroll = False
+            if self.previous_line is None:
+                scroll = True
+            elif abs(line - self.previous_line) > 4:
+                scroll = True
+            if scroll:
+                self.tui.query_one(CodeScroll).scroll_to(y=line-sub, speed=300)
+            self.previous_line = line
+
+        # scroll effect 2: follow cursor
+        # keep the cursor on top
+        elif self.scroll_effect == 2:
+            self.tui.query_one(CodeScroll).scroll_to(y=line-sub, speed=800)
 
     def update_hexdump(self):
         self.tui.query_one(HexDumpLine).data = self.machine.vmem[::]
