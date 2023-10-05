@@ -7,13 +7,13 @@ from typing import Callable
 from rich.text import Text
 
 class HexDumpLine(Static):
-    """todo"""
+    """print a hexdump from the data list. if the data is updated, the hexdump will update"""
     data = reactive([0]*1500)
 
     def generate_hexdump(self):
         data = self.data
         pad = "    "
-        ret = Text()
+        ret = ""
         for i in range(0, len(data), 16):
             hex_vals = []
             ascii_vals = []
@@ -21,7 +21,7 @@ class HexDumpLine(Static):
             for j in range(i, min(i + 16, len(data))):
                 val = data[j]
                 if val == 0:
-                    hex_vals.append(Text("..", style="gray"))
+                    hex_vals.append(f"{DARK_GRAY}00{RESET_COLOR}")
                 else:
                     hex_vals.append(f"{val:02X}")
                 ascii_vals.append(chr(val) if ord(' ') <= val <= ord('~') else ".")
@@ -30,15 +30,10 @@ class HexDumpLine(Static):
             if(len(hex_vals) < 16):
                 hex_padding = " __" * (16 - len(hex_vals))
 
-            ret.append(f"{i:04X}{pad}")
-            ret.append(Text("..", style="red"))
-            # ret.append(Text.assemble(
-            #         f"{i:04X}{pad}",
-            #         (" ".join(hex_vals) + hex_padding + pad),
-            #         ("".join(ascii_vals)),
-            #         "\n",
-            #         ))
-        return Text("..", style="red")
+            ret += f"{i:04X}" + pad
+            ret += " ".join(hex_vals) + hex_padding + pad
+            ret += "".join(ascii_vals) + "\n"
+        return Text.from_ansi(ret)
 
     def render(self)->Text:
         return self.generate_hexdump()
@@ -46,14 +41,14 @@ class HexDumpLine(Static):
 
 class CodeLine(Static):
     """todo"""
-    txt = reactive([0]*150)
+    txt = reactive(".\n"*256*3)
 
     def process_data(self):
         arr = [f"{d}\n" for d in self.txt]
         return " ".join(arr)
 
-    def render(self)->str:
-        return self.process_data()
+    def render(self)->Text:
+        return Text.from_ansi(self.txt)
 
 
 class HexDump(Static):

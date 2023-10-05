@@ -79,6 +79,7 @@ machine.load_code(code_dump)
 # print(hexdump(machine.vmem))
 debugger = Debugger(machine)
 
+#dis = Disassembler(machine)
 
 # machine.trap_mode_enabled = True
 # def handler(machine, type):
@@ -95,7 +96,6 @@ debugger = Debugger(machine)
 #print_hexdump(machine.vmem)
 
 # embed()
-# dis = Disassembler(machine)
 
 #yan85 is a simple architecture, and we can emulate it easily.
 #therefore we can implement a recursive descent disassembler

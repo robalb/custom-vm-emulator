@@ -18,7 +18,7 @@ class Debugger:
         self.machine.set_trap_handler(handler)
 
         #init disassembler
-        # self.disassembler = Disassembler(machine)
+        self.disassembler = Disassembler(machine)
 
         # init TUI
         self.tui = DebuggerTUI()
@@ -61,7 +61,9 @@ class Debugger:
         self.tui.query_one(Info).txt = msg
 
     def update_code(self):
-        self.tui.query_one(CodeLine).txt = [1]*100
+
+        txt = self.disassembler.disassemble()
+        self.tui.query_one(CodeLine).txt = txt
 
     def update_hexdump(self):
         self.tui.query_one(HexDumpLine).data = self.machine.vmem[::]

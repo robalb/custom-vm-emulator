@@ -24,11 +24,13 @@ class Entity:
         self.address = address
         self.bytes = bytes
 
-    def readable(self):
+    def readable(self)-> str:
         if self.type == self.Type.byte:
             return self.readable_byte()
         elif self.type == self.Type.code:
             return self.readable_code()
+        else:
+            return ""
 
     def readable_byte(self):
         ret = ""
@@ -54,8 +56,6 @@ class Entity:
                 if param == Register.N:
                     params_str[i] = f"{DARK_GRAY}N{RESET_COLOR}"
 
-
-
         data = f"{DARK_GRAY}{bytes}{RESET_COLOR} {opcode}   {params_str[0]} {params_str[1]}"
         ret = f"{self.address:04X}  {data}"
         ret += f"    {DARK_GRAY}{self.line_comment}{RESET_COLOR}"
@@ -72,31 +72,12 @@ class Disassembler:
     #and infer all the informations required for the static disassembly
     #such as the register name order. It change from machine to machine
     machine: Machine
-    # TODO: find the best data type option
-    # A copy of the machine memory, where instead of bytes
-    # every cell contains a referece to the entity associated to
-    # that address
-    #vmem_mapping = []
-    # an alternative to vmem_mapping: a key-value dict, the key is a memory address,
-    # the value is its entity. the entity will contain info about its byte length
-    vmem_mapping = {}
-    # a dict of entities. An entity can be a byte of data,
-    # or a multy byte instruction
-    entities = {}
-
 
     def __init__(self, machine: Machine):
         self.machine = machine
-        self.instr_stack.append(machine.conf['code_base_address'])
-        while len(self.instr_stack) > 0:
-            #pop an instruction from the stack
-            instr_addr = self.instr_stack.pop()
-            self.disass_sweep(instr_addr)
-
 
     def _byte_at(self, addr):
         return self.machine.vmem[addr]
-
 
     def _get_instructionClass(self, opcode_byte)-> Instruction|None:
         if opcode_byte not in self.machine.conf['opcode_bytes']:
@@ -112,17 +93,27 @@ class Disassembler:
         else:
             return self.machine.conf['register_bytes'][param_byte]
 
-    def disass_sweep(self, instr_addr):
-        entity = self.disass_instruction(instr_addr)
-        print(entity.readable())
-        #associate the instruction entity to the current instruction
-        self.vmem_mapping[instr_addr] = entity
-        # if the entity is an instruction
-        if entity.type == Entity.Type.code:
-            #add the next instruction to the stack, since this is a linear sweep
-            #TODO: do this in a new function
+    def disassemble(self)->str:
+        ret = ""
+        #reset the disassembler state
+        self.instr_stack = []
+        self.vmem_mapping = {}
+        self.entities = {}
+        #disassemble based on the current machine state.
+        self.instr_stack.append(self.machine.conf['code_base_address'])
+        while len(self.instr_stack) > 0:
+            #pop an instruction from the stack
+            instr_addr = self.instr_stack.pop()
+            entity = self.disass_instruction(instr_addr)
+            ret += entity.readable()
+            ret += "\n"
+            #associate the instruction entity to the current instruction
+            # self.vmem_mapping[instr_addr] = entity
+            #add the next instruction to the stack
+            #if this was not a linear sweep, this should also check that entity.type == code
             if instr_addr+3 < len(self.machine.vmem):
                 self.instr_stack.append(instr_addr+3)
+        return ret
 
 
     def disass_instruction(self, instr_addr) -> Entity:
@@ -164,25 +155,28 @@ class Disassembler:
                     #handle data params
                     instr_entity.params[i] = instr_bytes[i]
 
-        #handle instruction comments
-        if instr_entity.instruction.opcode == Opcode.STK:
-            p1 = instr_entity.params[0]
-            p2 = instr_entity.params[1]
-            if isinstance(p1, Register) and isinstance(p2, Register):
-                if p1 == Register.N and p2 == Register.N:
-                    comment = "nop"
-                elif p2 == Register.N:
-                    comment = f"pop {p1.value}"
-                elif p1 == Register.N:
-                    comment = f"push {p2.value}"
-                else:
-                    comment = f"{p1.value} = {p2.value}"
-                instr_entity.line_comment = comment
-        if instr_entity.instruction.opcode == Opcode.IMM:
-            p2 = instr_entity.params[1]
-            if isinstance(p2, int) and p2 >= ord(' ') and p2 <= ord('~'):
-                instr_entity.line_comment = f"'{chr(p2)}'"
-
+            #handle instruction comments
+            if instr_entity.instruction.opcode == Opcode.STK:
+                p1 = instr_entity.params[0]
+                p2 = instr_entity.params[1]
+                if isinstance(p1, Register) and isinstance(p2, Register):
+                    if p1 == Register.N and p2 == Register.N:
+                        comment = "nop"
+                    elif p2 == Register.N:
+                        comment = f"pop {p1.value}"
+                    elif p1 == Register.N:
+                        comment = f"push {p2.value}"
+                    else:
+                        comment = f"{p1.value} = {p2.value}"
+                    instr_entity.line_comment = comment
+            if instr_entity.instruction.opcode == Opcode.IMM:
+                p1 = instr_entity.params[0]
+                p2 = instr_entity.params[1]
+                if isinstance(p1, Register) and isinstance(p2, int):
+                    if p1 == Register.i:
+                        instr_entity.line_comment = f"JMP {hex(p2)}"
+                    elif p2 >= ord(' ') and p2 <= ord('~'):
+                        instr_entity.line_comment = f"'{chr(p2)}'"
 
         #handle invalid instructions
         if len(disass_error) > 0:
