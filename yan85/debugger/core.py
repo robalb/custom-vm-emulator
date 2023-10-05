@@ -24,7 +24,8 @@ class Debugger:
         self.tui = DebuggerTUI()
         self.tui.stepi_callback = self.stepi_callback
         self.tui.context_callback = self.context_callback
-
+        self.tui.ready_callback = self.ready_callback
+        
         # launch the TUI
         self.tui.run()
 
@@ -67,6 +68,10 @@ class Debugger:
 
     def update_hexdump(self):
         self.tui.query_one(HexDumpLine).data = self.machine.vmem[::]
+
+    def ready_callback(self):
+        self.update_hexdump()
+        self.update_code()
 
     def stepi_callback(self):
         self.machine.run_loop()

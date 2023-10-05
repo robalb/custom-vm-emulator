@@ -8,7 +8,7 @@ from rich.text import Text
 
 class HexDumpLine(Static):
     """print a hexdump from the data list. if the data is updated, the hexdump will update"""
-    data = reactive([0]*1500)
+    data = reactive([0]*1500) #add layout=True to fir for future data size changes
 
     def generate_hexdump(self):
         data = self.data
@@ -41,12 +41,7 @@ class HexDumpLine(Static):
 
 class CodeLine(Static):
     """todo"""
-    txt = reactive(".\n"*256*3)
-
-    def process_data(self):
-        arr = [f"{d}\n" for d in self.txt]
-        return " ".join(arr)
-
+    txt = reactive(".\n"*400)
     def render(self)->Text:
         return Text.from_ansi(self.txt)
 
@@ -123,12 +118,17 @@ class DebuggerTUI(App):
     stepi_callback: None|Callable = None
     reverse_stepi_callback: None|Callable = None
     context_callback: None|Callable = None
+    ready_callback: None|Callable = None
 
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Info()
         yield Columns()
+
+    def on_ready(self) -> None:
+        if self.ready_callback is not None:
+            self.ready_callback()
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
@@ -138,12 +138,11 @@ class DebuggerTUI(App):
         """step instruction"""
         if self.stepi_callback is not None:
             self.stepi_callback()
-        # self.count += 1
-        # self.query_one(Info).txt = f"{self.count}"
 
     def action_reverse_stepi(self) -> None:
         """reverse step instruction"""
-        pass
+        if self.reverse_stepi_callback is not None:
+            self.reverse_stepi_callback()
 
     def action_context(self) -> None:
         """print context"""
