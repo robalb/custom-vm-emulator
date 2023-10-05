@@ -257,10 +257,10 @@ class Machine:
         while not self.trap_halt:
             #fetch instruction bytes
             pc = self._read_register(Register.i)
-            pc *= 3
-            opcode = self._read_memory(pc)
-            param1 = self._read_memory(pc+1)
-            param2 = self._read_memory(pc+2)
+            instr_addr = pc * 3
+            opcode = self._read_memory(instr_addr)
+            param1 = self._read_memory(instr_addr+1)
+            param2 = self._read_memory(instr_addr+2)
             #increment program counter
             self._write_register(Register.i, pc+1)
             #execute fetched instruction

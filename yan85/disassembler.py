@@ -105,6 +105,7 @@ class Disassembler:
             #pop an instruction from the stack
             instr_addr = self.instr_stack.pop()
             entity = self.disass_instruction(instr_addr)
+            ret += self.siderbar_line(entity)
             ret += entity.readable()
             ret += "\n"
             #associate the instruction entity to the current instruction
@@ -114,6 +115,21 @@ class Disassembler:
             if instr_addr+3 < len(self.machine.vmem):
                 self.instr_stack.append(instr_addr+3)
         return ret
+
+    def siderbar_line(self, entity)->str:
+        instr_addr = self.machine._read_register(Register.i) * 3
+        is_current = entity.address == instr_addr
+        runs = 0
+
+        if is_current:
+            is_current = ">>"
+        else:
+            is_current = "  "
+        if runs == 0:
+            runs = "  "
+        else:
+            runs = f"{runs:02}"
+        return f"   {is_current} {runs} "
 
 
     def disass_instruction(self, instr_addr) -> Entity:
