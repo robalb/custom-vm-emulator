@@ -158,20 +158,21 @@ class Disassembler:
                 self._get_register(instr_bytes[1]),
                 self._get_register(instr_bytes[2]),
             ]
+
             # validate params
             for i in range(len(instruction.params)):
+                #handle register params
                 if instruction.params[i] == Param.reg8:
-                    #handle register params
                     if params_as_reg[i] is None:
                         disass_error = f"{instruction.opcode.value} Invalid Register"
                         break
                     else:
                         instr_entity.params[i] = params_as_reg[i]
+                #handle data params
                 elif instruction.params[i] == Param.imm8:
-                    #handle data params
                     instr_entity.params[i] = instr_bytes[i+1]
 
-            #handle instruction comments
+            #handle instruction comments or special cases
             if instr_entity.instruction.opcode == Opcode.STK:
                 p1 = instr_entity.params[0]
                 p2 = instr_entity.params[1]
@@ -185,6 +186,7 @@ class Disassembler:
                     else:
                         comment = f"{p1.value} = {p2.value}"
                     instr_entity.line_comment = comment
+
             if instr_entity.instruction.opcode == Opcode.IMM:
                 p1 = instr_entity.params[0]
                 p2 = instr_entity.params[1]
@@ -193,6 +195,7 @@ class Disassembler:
                         instr_entity.line_comment = f"JMP {hex(p2*3)}"
                     elif p2 >= ord(' ') and p2 <= ord('~'):
                         instr_entity.line_comment = f"'{chr(p2)}'"
+
             if instr_entity.instruction.opcode == Opcode.JMP:
                 p2 = instr_entity.params[1]
                 if isinstance(p2, int):
@@ -200,7 +203,15 @@ class Disassembler:
                     flags = "".join(flags)
                     instr_entity.line_comment = f" ({flags})"
 
-
+            if instr_entity.instruction.opcode == Opcode.SYS:
+                p1 = instr_entity.params[0]
+                if isinstance(p1, int):
+                    syscall_bytes = self.machine.conf['syscall_bytes']
+                    if p1 not in syscall_bytes:
+                        disass_error = f"syscall  Invalid number {hex(p1)}"
+                    else:
+                        syscall = syscall_bytes[p1].value
+                        instr_entity.line_comment = f"{syscall}()"
 
         #handle invalid instructions
         if len(disass_error) > 0:

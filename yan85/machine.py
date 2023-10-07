@@ -48,6 +48,7 @@ class TrapType(Enum):
     invalid_read='invalid_read'
     invalid_write='invalid_write'
     invalid_register='invalid_register'
+    program_exit='program_exit'
 
 class Instruction:
     opcode: Opcode
@@ -102,12 +103,12 @@ class Machine:
             0x10: Flag.L
             },
         'syscall_bytes': {
-            #TODO: complete
-            0x1:  Flag.N,
-            0x2:  Flag.E,
-            0x4:  Flag.Z,
-            0x8:  Flag.G,
-            0x10: Flag.L
+            0x20: Syscall.open,
+            0x4:  Syscall.read_code,
+            0x8:  Syscall.read_memory,
+            0x10: Syscall.write,
+            0x1:  Syscall.sleep,
+            0x2:  Syscall.exit,
             }
         }
 
@@ -210,10 +211,10 @@ class Machine:
 
     class InstructionSYS(Instruction):
         opcode = Opcode.SYS
-        params = [Param.reg8, Param.reg8]
+        params = [Param.imm8, Param.reg8]
         description = """
-        SYS(reg1, reg2)
-            reg1 is the opcode, reg2 is the param
+        SYS(imm, reg)
+            imm is the opcode, reg is the param
             other registers could be accessed for extra params
             depending on the opcode
         """
@@ -252,7 +253,7 @@ class Machine:
 
     def reset_memory(self):
         """
-        Set every byte int the virtual memory to zero
+        Set every byte in the virtual memory to zero
         """
         self.vmem = [0] * self.conf['vmem_bytes']
 
@@ -426,8 +427,16 @@ class Machine:
                         )
 
         elif opcodes[opcode_byte] == Opcode.SYS:
-            print("SYS")
-            pass
+            print("[DEBUG] SYS")
+            if param1_byte in self.conf['syscall_bytes']:
+                syscall = self.conf['syscall_bytes'][param1_byte]
+                if syscall == Syscall.exit:
+                    self._syscall_exit()
+                else:
+                    self.__set_trap(TrapType.invalid_opcode)
+
+    def _syscall_exit(self):
+        self.__set_trap(TrapType.program_exit)
 
 
     def __set_trap(self, type: TrapType):
