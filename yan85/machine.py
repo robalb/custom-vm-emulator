@@ -33,6 +33,15 @@ class Flag(Enum):
     G='G' #r1 > r2
     L='L' #r1 < r2
 
+class Syscall(Enum):
+    exit='exit'
+    sleep='sleep'
+    read_code='read_code'
+    read_memory='read_memory'
+    open='open'
+    write='write'
+
+
 class TrapType(Enum):
     trap_mode='trap_mode'
     invalid_opcode='invalid_opcode'
@@ -54,6 +63,7 @@ class Machine:
         'vmem_bytes': 0,
         'code_base_address': 0x0,
         'registers_base_address': 0x400,
+        'memory_base_address': 0x300,
         #individual offset of each register from registers base address
         'registers_address_offset': {
             Register.A: 0x0,
@@ -85,6 +95,14 @@ class Machine:
             0x40: Opcode.SYS,
             },
         'flag_bytes': {
+            0x1:  Flag.N,
+            0x2:  Flag.E,
+            0x4:  Flag.Z,
+            0x8:  Flag.G,
+            0x10: Flag.L
+            },
+        'syscall_bytes': {
+            #TODO: complete
             0x1:  Flag.N,
             0x2:  Flag.E,
             0x4:  Flag.Z,
@@ -218,12 +236,14 @@ class Machine:
                  vmem_bytes=conf['vmem_bytes'],
                  code_base_address=conf['code_base_address'],
                  registers_base_address=conf['registers_base_address'],
+                 memory_base_address=conf['memory_base_address'],
                  register_bytes=conf['register_bytes'],
                  opcode_bytes=conf['opcode_bytes']
                  ):
         self.conf['vmem_bytes'] = vmem_bytes
         self.conf['code_base_address'] = code_base_address
         self.conf['registers_base_address'] = registers_base_address
+        self.conf['memory_base_address'] = memory_base_address
         self.conf['register_bytes'] = register_bytes
         self.conf['opcode_bytes'] = opcode_bytes
         #initialize the virtual memory
@@ -257,9 +277,9 @@ class Machine:
             #fetch instruction bytes
             pc = self._read_register(Register.i)
             instr_addr = pc * 3
-            opcode = self._read_memory(instr_addr)
-            param1 = self._read_memory(instr_addr+1)
-            param2 = self._read_memory(instr_addr+2)
+            opcode = self._read_vmem(instr_addr)
+            param1 = self._read_vmem(instr_addr+1)
+            param2 = self._read_vmem(instr_addr+2)
             #increment program counter
             self._write_register(Register.i, pc+1)
             #execute fetched instruction
@@ -449,13 +469,14 @@ class Machine:
 
 
 
-    def _write_memory(self, addr: int, data: int):
+    def _write_vmem(self, addr: int, data: int):
         """
-        Write a single byte to memory.
+        Write a single byte to the virtual memory, without adding any offset
 
         If the given addr is invalid, 
         nothing is written and the trap bit is set
         """
+        # addr += self.conf['memory_base_address']
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address write: {hex(addr)}")
             self.__set_trap(TrapType.invalid_write)
@@ -463,9 +484,9 @@ class Machine:
             self.vmem[addr] = self.__byte(data)
 
 
-    def _read_memory(self, addr: int):
+    def _read_vmem(self, addr: int):
         """
-        Read a single byte from memory.
+        Read a single byte from the virtual memory, without adding any offset
 
         If the given addr is invalid, 
         0 is returned and the trap bit is set.
@@ -481,11 +502,29 @@ class Machine:
     def _write_register(self, reg: Register, data: int):
         address = self.conf['registers_base_address']
         address += self.conf['registers_address_offset'][reg]
-        self._write_memory(address, data)
+        self._write_vmem(address, data)
 
 
     def _read_register(self, reg: Register):
         address = self.conf['registers_base_address']
         address += self.conf['registers_address_offset'][reg]
-        return self._read_memory(address)
+        return self._read_vmem(address)
+
+
+    def _write_memory(self, addr: int, data: int):
+        """
+        Write a single byte to the memory segment
+        (addr + memory_base_address)
+        """
+        addr += self.conf['memory_base_address']
+        self._write_vmem(addr, data)
+
+
+    def _read_memory(self, addr: int):
+        """
+        Read a single byte from the memory segment
+        (addr + memory_base_address)
+        """
+        addr += self.conf['memory_base_address']
+        return self._read_vmem(addr)
 

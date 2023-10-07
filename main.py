@@ -52,6 +52,7 @@ machine = Machine(
         vmem_bytes = 1080,
         code_base_address = 0,
         registers_base_address = 0x400,
+        memory_base_address = 0x300,
         register_bytes = {
             0x0:  Register.N,
             0x10: Register.A,
