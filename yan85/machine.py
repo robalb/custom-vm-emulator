@@ -321,11 +321,11 @@ class Machine:
         # if machine is in trap mode, set trap regardless of
         # the instruction that just run
         if self.trap_mode_enabled:
-            self.__set_trap(TrapType.trap_mode)
+            self._set_trap(TrapType.trap_mode)
 
         #invalid opcode, set trap
         if opcode_byte not in opcodes:
-            self.__set_trap(TrapType.invalid_opcode)
+            self._set_trap(TrapType.invalid_opcode)
 
         elif opcodes[opcode_byte] == Opcode.IMM:
             print("[DEBUG] IMM")
@@ -432,19 +432,40 @@ class Machine:
                 syscall = self.conf['syscall_bytes'][param1_byte]
                 if syscall == Syscall.exit:
                     self._syscall_exit()
-                else:
-                    self.__set_trap(TrapType.invalid_opcode)
+                if syscall == Syscall.sleep:
+                    self._syscall_sleep()
+                if syscall == Syscall.read_code:
+                    self._syscall_read_code()
+                if syscall == Syscall.read_memory:
+                    self._syscall_read_memory()
+                if syscall == Syscall.open:
+                    self._syscall_open()
+                if syscall == Syscall.write:
+                    self._syscall_write()
+
 
     def _syscall_exit(self):
-        self.__set_trap(TrapType.program_exit)
+        self._set_trap(TrapType.program_exit)
+    def _syscall_sleep(self):
+        pass
+    def _syscall_read_code(self):
+        pass
+    def _syscall_write_code(self):
+        pass
+    def _syscall_read_memory(self):
+        pass
+    def _syscall_open(self):
+        pass
+    def _syscall_write(self):
+        pass
 
 
-    def __set_trap(self, type: TrapType):
+    def _set_trap(self, type: TrapType):
         self.trap_halt = True
         self.trap_type = type
 
 
-    def __byte(self, data:int):
+    def _byte(self, data:int):
         """
         we are using python Int to simulate c uint8_t,
         wich off course will have completely different math.
@@ -473,7 +494,7 @@ class Machine:
         if byte in self.conf['register_bytes']:
             return self.conf['register_bytes'][byte]
         else:
-            self.__set_trap(TrapType.invalid_register)
+            self._set_trap(TrapType.invalid_register)
             return Register.A
 
 
@@ -488,9 +509,9 @@ class Machine:
         # addr += self.conf['memory_base_address']
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address write: {hex(addr)}")
-            self.__set_trap(TrapType.invalid_write)
+            self._set_trap(TrapType.invalid_write)
         else:
-            self.vmem[addr] = self.__byte(data)
+            self.vmem[addr] = self._byte(data)
 
 
     def _read_vmem(self, addr: int):
@@ -502,7 +523,7 @@ class Machine:
         """
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address read: {hex(addr)}")
-            self.__set_trap(TrapType.invalid_read)
+            self._set_trap(TrapType.invalid_read)
             return 0
         else:
             return self.vmem[addr]
