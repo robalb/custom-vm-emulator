@@ -44,6 +44,9 @@ class Debugger:
 
 
     def update_info(self):
+        register_f_bytes = self.machine._read_register(Register.f)
+        flags = [f.value for f in self.machine._get_flags(register_f_bytes)]
+        flags = "".join(flags)
         res = ""
         reg = self.machine._read_register(Register.i)
         res += f"i:{hex(reg)}  i*3:{hex(reg*3)}  "
@@ -56,10 +59,10 @@ class Debugger:
         res += f"C:{hex(reg)}  "
         reg = self.machine._read_register(Register.D)
         res += f"D:{hex(reg)}  "
-        reg = self.machine._read_register(Register.f)
-        res += f"f:{hex(reg)}  "
         reg = self.machine._read_register(Register.s)
         res += f"s:{hex(reg)}  "
+        reg = self.machine._read_register(Register.f)
+        res += f"f:{hex(reg)} ({flags}) "
         res += "       (s: step   r: reverse step   ctrl+c: quit)"
         self.tui.query_one(Info).txt = res
     

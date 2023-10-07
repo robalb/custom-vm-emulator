@@ -166,7 +166,6 @@ class Machine:
             comparison between reg1 and reg2.
 
         Flag register content: (bit order may change)
-
             4 1
         0000000
           |||||
@@ -327,7 +326,7 @@ class Machine:
         elif opcodes[opcode_byte] == Opcode.STK:
             print("[DEBUG] STK")
             #push
-            if param2_byte is not 0:
+            if param2_byte != 0:
                 reg2 = self._get_register(param2_byte)
                 #increment stack pointer (stack is not backwards)
                 stack_pointer = self._read_register(Register.s)
@@ -339,7 +338,7 @@ class Machine:
                         self._read_register(reg2)
                         )
             #pop
-            if param1_byte is not 0:
+            if param1_byte != 0:
                 #read from stack
                 reg1 = self._get_register(param1_byte)
                 stack_pointer = self._read_register(Register.s)
@@ -371,15 +370,44 @@ class Machine:
                     )
 
         elif opcodes[opcode_byte] == Opcode.CMP:
-            print("CMP")
-            pass
+            print("[DEBUG] CMP")
+            flag_to_byte = {v: k for k, v in self.conf['flag_bytes'].items()}
+            ret= 0
+            reg1 = self._get_register(param1_byte)
+            reg2 = self._get_register(param2_byte)
+            reg1_byte = self._read_register(reg1)
+            reg2_byte = self._read_register(reg2)
+            # less
+            if reg1_byte < reg2_byte:
+                ret |= flag_to_byte[Flag.L]
+            # greater
+            if reg2_byte < reg1_byte:
+                ret |= flag_to_byte[Flag.G]
+            # equal
+            if reg2_byte == reg1_byte:
+                ret |= flag_to_byte[Flag.E]
+            # not equal
+            else:
+                ret |= flag_to_byte[Flag.N]
+            # zero
+            if reg1_byte == 0 and reg2_byte == 0:
+                ret |= flag_to_byte[Flag.Z]
+            #save result to flags register
+            self._write_register(Register.f, ret)
+
         elif opcodes[opcode_byte] == Opcode.JMP:
-            print("JMP")
-            pass
+            print("[DEBUG] JMP")
+            flag_byte = self._read_register(Register.f)
+            if param2_byte == 0 or flag_byte & param2_byte == 0:
+                # taken
+                self._write_register(
+                        Register.f,
+                        self._read_register(self._get_register(param1_byte))
+                        )
+
         elif opcodes[opcode_byte] == Opcode.SYS:
             print("SYS")
             pass
-
 
 
     def __set_trap(self, type: TrapType):
@@ -395,6 +423,15 @@ class Machine:
         This is easier than using ctypes
         """
         return data % 256
+
+
+    def _get_flags(self, flag_byte) -> List[Flag]:
+        ret = []
+        for flag in self.conf['flag_bytes']:
+            if flag_byte & flag:
+                ret.append(self.conf['flag_bytes'][flag])
+        return ret
+
 
     def _get_register(self, byte: int) -> Register:
         """

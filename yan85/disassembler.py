@@ -193,6 +193,14 @@ class Disassembler:
                         instr_entity.line_comment = f"JMP {hex(p2*3)}"
                     elif p2 >= ord(' ') and p2 <= ord('~'):
                         instr_entity.line_comment = f"'{chr(p2)}'"
+            if instr_entity.instruction.opcode == Opcode.JMP:
+                p2 = instr_entity.params[1]
+                if isinstance(p2, int):
+                    flags = [f.value for f in self.machine._get_flags(p2)]
+                    flags = "".join(flags)
+                    instr_entity.line_comment = f" ({flags})"
+
+
 
         #handle invalid instructions
         if len(disass_error) > 0:
