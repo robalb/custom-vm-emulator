@@ -128,7 +128,7 @@ class Disassembler:
         if runs == 0:
             runs = "  "
         else:
-            runs = f"{runs:02}"
+            runs = f"{BLUE}{runs:02}{RESET_COLOR}"
         return f"   {is_current} {runs} "
 
 
@@ -159,7 +159,6 @@ class Disassembler:
                 self._get_register(instr_bytes[2]),
             ]
             # validate params
-            # TODO: rewrite this block, it hsa a bug in the way it orders params
             for i in range(len(instruction.params)):
                 if instruction.params[i] == Param.reg8:
                     #handle register params
@@ -170,7 +169,7 @@ class Disassembler:
                         instr_entity.params[i] = params_as_reg[i]
                 elif instruction.params[i] == Param.imm8:
                     #handle data params
-                    instr_entity.params[i] = instr_bytes[i]
+                    instr_entity.params[i] = instr_bytes[i+1]
 
             #handle instruction comments
             if instr_entity.instruction.opcode == Opcode.STK:
@@ -191,7 +190,7 @@ class Disassembler:
                 p2 = instr_entity.params[1]
                 if isinstance(p1, Register) and isinstance(p2, int):
                     if p1 == Register.i:
-                        instr_entity.line_comment = f"JMP {hex(p2)}"
+                        instr_entity.line_comment = f"JMP {hex(p2*3)}"
                     elif p2 >= ord(' ') and p2 <= ord('~'):
                         instr_entity.line_comment = f"'{chr(p2)}'"
 
