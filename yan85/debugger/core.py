@@ -2,6 +2,7 @@ from .tui_interface import DebuggerTUI, Info, HexDumpLine, CodeLine, CodeScroll
 from ..machine import Machine, Opcode, Register, TrapType
 from ..disassembler import Disassembler
 from ..utils import *
+from typing import List
 
 class Debugger:
 
@@ -19,7 +20,10 @@ class Debugger:
     # program_exit = False
     trap_reached: None|TrapType = None
 
-    def __init__(self, machine: Machine):
+    breaks: List[int] = []
+    continue_until_break = False
+
+    def __init__(self, machine: Machine, breaks):
         #init machine
         self.machine = machine
         self.machine.trap_mode_enabled = True
@@ -30,8 +34,12 @@ class Debugger:
         #init disassembler
         self.disassembler = Disassembler(machine)
 
+        #init debugger
+        self.breaks = breaks
+
         # init TUI
         self.tui = DebuggerTUI()
+        self.tui.continue_callback = self.continue_callback
         self.tui.stepi_callback = self.stepi_callback
         self.tui.reverse_stepi_callback = self.reverse_stepi_callback
         self.tui.context_callback = self.context_callback
@@ -42,13 +50,33 @@ class Debugger:
 
 
     def trap_handler(self, type: TrapType):
-            if type is not TrapType.trap_mode:
-                self.trap_reached = type
-                self.print(f"Reached unhandled trap: {type.value} (c to print context)")
-            else:
-                self.update_info()
+        # we reached a trap
+        if type is not TrapType.trap_mode:
+            self.trap_reached = type
+            self.continue_until_break = False
+            self.print(f"Reached unhandled trap: {type.value}")
             self.update_hexdump()
             self.update_code()
+        # we are single stepping peacefully
+        elif not self.continue_until_break:
+            self.update_info()
+            self.update_hexdump()
+            self.update_code()
+        # c was pressed, we reached a breakpoint
+        elif self.is_breakpoint():
+            self.continue_until_break = False
+            self.print("Reached breakpoint")
+            self.update_hexdump()
+            self.update_code()
+        # c was pressed, we didn't reach a breakpoint yet
+        else:
+            self.stepi_callback()
+
+
+    def is_breakpoint(self)-> bool:
+        i = self.machine._read_register(Register.i)
+        instruction_addr = i*3
+        return instruction_addr in self.breaks
 
 
     def update_info(self):
@@ -74,8 +102,8 @@ class Debugger:
         res += "       (s: step   r: reverse step   ctrl+c: quit)"
         self.tui.query_one(Info).txt = res
     
-    def print(self, msg):
-        self.tui.query_one(Info).txt = msg
+    def print(self, msg, help=" (x to print context)"):
+        self.tui.query_one(Info).txt = msg + help
 
     def update_code(self):
         txt = self.disassembler.disassemble()
@@ -114,9 +142,14 @@ class Debugger:
         self.update_hexdump()
         self.update_code()
 
+    def continue_callback(self):
+        self.continue_until_break = True
+        self.stepi_callback()
+
+
     def stepi_callback(self):
         if self.trap_reached is not None:
-            self.print(f"Reached unhandled trap: {self.trap_reached.value} (c to print context)")
+            self.print(f"Reached unhandled trap: {self.trap_reached.value}")
         else:
             #record a snapshot ot the current machine state
             self.vmem_snapshots.append(self.machine.vmem[::])
@@ -132,7 +165,7 @@ class Debugger:
             # we pretend the machine executed, and called the trap handler
             self.trap_handler(TrapType.trap_mode)
         else:
-            self.print(f"Reached end of the recording (c to print context)")
+            self.print(f"Reached end of the recording")
 
     def context_callback(self):
         self.update_info()

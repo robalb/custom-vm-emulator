@@ -142,7 +142,7 @@ class Info(Static):
     }
     """
 
-    txt = reactive("Debugger ready.   s: step   c: context   r: reverse step")
+    txt = reactive("Debugger ready.   s: step   r: reverse step   c: continue   x: context")
 
     def render(self)->Text:
         return Text.from_ansi(" " + self.txt)
@@ -155,11 +155,13 @@ class DebuggerTUI(App):
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode"),
                 ("s", "stepi", "step instruction"),
                 ("r", "reverse_stepi", "step one instruction back in time"),
-                ("c", "context", "print context"),
+                ("x", "context", "print context"),
+                ("c", "continue", "continue until break"),
                 ]
     CSS_PATH = "styles.tcss"
 
     count = 0
+    continue_callback: None|Callable = None
     stepi_callback: None|Callable = None
     reverse_stepi_callback: None|Callable = None
     context_callback: None|Callable = None
@@ -178,6 +180,11 @@ class DebuggerTUI(App):
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         self.dark = not self.dark
+
+    def action_continue(self) -> None:
+        """continue to next breakpoint"""
+        if self.continue_callback is not None:
+            self.continue_callback()
 
     def action_stepi(self) -> None:
         """step instruction"""

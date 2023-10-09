@@ -76,6 +76,15 @@ machine = Machine(
 
 machine.load_code(code_dump)
 
+
+breaks = [
+        0x1f8
+        ]
+
+debugger = Debugger(machine, breaks)
+
+
+
+
 #dis = Disassembler(machine)
 # print(hexdump(machine.vmem))
-debugger = Debugger(machine)
