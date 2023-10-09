@@ -10,7 +10,7 @@ be used individually in reverse engineering scripts.
 A simple TUI debugger with time travel support is implemented based on those classes
 
 <p align="center">
-<img src="./docs/screen1.png" width="600px" height="auto" />
+<img src="./docs/screen1.png" width="900px" height="auto" />
 </p>
 
 ## example usage
