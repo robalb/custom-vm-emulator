@@ -1,13 +1,13 @@
 # yan85 emulator, disassembler and timeless debuggger
 
-This project implements a Terminal user interface for the reverse engineering
-of yan85 programs, the pwncollege custom architetcture.
+This project implements a set of tools for the reverse engineering
+of yan85, the custom architecture used for vm-based obfuscation challenges in pwn.college
 
-Project Modules:
+## Project Modules:
 
-It's composed of an emulator and a Disassembler python modules, which can
-be used individually in reverse engineering scripts.
-A simple TUI debugger with time travel support is implemented based on those classes
+- `yan85.machine` A highly extensible yan85 emulator, with support for single-step execution mode
+- `yan85.disassembler` Simple disassembler that extends the given yan85 emulator
+- `yan85.debugger` A TUI program based on the textual python library. It provides a time travel debugger with a scrollable view of the program memory and code disassembly
 
 <p align="center">
 <img src="./docs/screen1.png" width="900px" height="auto" />
@@ -37,17 +37,37 @@ code_dump = """
 43 10 00 08 40 08 54 10 00 08 40 08 21 10 00 08
 """
 
-# initialze a yan85 machine
 machine = Machine(
-        vmem_bytes = 1024,
+        vmem_bytes = 1080,
         code_base_address = 0,
         registers_base_address = 0x400,
-        register_order = 'ABCDsif'
+        memory_base_address = 0x300,
+        register_bytes = {
+            0x0:  Register.N,
+            0x10: Register.A,
+            0x20: Register.B,
+            0x2:  Register.C,
+            0x8:  Register.D,
+            0x4:  Register.s,
+            0x40: Register.i,
+            0x1:  Register.f,
+            },
+        opcode_bytes = {
+            0x40: Opcode.IMM,
+            0x1:  Opcode.ADD,
+            0x10: Opcode.STK,
+            0x8:  Opcode.STM,
+            0x2:  Opcode.LDM,
+            0x20: Opcode.CMP,
+            0x4:  Opcode.JMP,
+            0x80: Opcode.SYS,
+            }
         )
 
 machine.load_code(code_dump)
 
-print_hexdump(machine.vmem)
+#launch the debugger interface. ctrl-c to quit
+debugger = Debugger(machine)
 ```
 
 ## yan specs
