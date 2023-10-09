@@ -16,6 +16,8 @@ class Debugger:
     #machine snapshots for time travel
     vmem_snapshots = []
     current_snapshot = 0
+    program_exit = False
+    trap_reached = None
 
     def __init__(self, machine: Machine):
         #init machine
@@ -40,7 +42,10 @@ class Debugger:
 
 
     def trap_handler(self, type: TrapType):
-            if type is not TrapType.trap_mode:
+            if type is TrapType.program_exit:
+                self.program_exit = True
+                self.print(f" Reached exit() syscall (c to print context)")
+            elif type is not TrapType.trap_mode:
                 self.print(f" Error: {type.value} (c to print context)")
             else:
                 self.update_info()
@@ -112,14 +117,18 @@ class Debugger:
         self.update_code()
 
     def stepi_callback(self):
-        #record a snapshot ot the current machine state
-        self.vmem_snapshots.append(self.machine.vmem[::])
-        # run the machine
-        self.machine.run_loop()
+        if self.program_exit:
+            self.print(f" Reached exit() syscall (c to print context)")
+        else:
+            #record a snapshot ot the current machine state
+            self.vmem_snapshots.append(self.machine.vmem[::])
+            # run the machine
+            self.machine.run_loop()
 
     def reverse_stepi_callback(self):
         #restore previous machine state
         if len(self.vmem_snapshots) > 0:
+            self.program_exit = False
             vmem = self.vmem_snapshots.pop()
             self.machine.vmem = vmem[::]
             # we pretend the machine executed, and called the trap handler

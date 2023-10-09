@@ -16,8 +16,8 @@ of yan85, the custom architecture used for vm-based obfuscation challenges in pw
 ## example usage
 
 ```python
-from yan85.machine import Machine
-from yan85.utils import *
+from yan85.machine import Machine, Opcode, Register
+from yan85.debugger.core import Debugger
 
 code_dump = """
 08 40 08 52 10 00 08 40 08 52 10 00 08 40 08 45
