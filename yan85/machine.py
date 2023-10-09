@@ -288,11 +288,6 @@ class Machine:
 
 
     def handle_trap(self):
-        # TODO
-        # halt should be handled by a configurable callable.
-        # could be nice to have a debugger class, that takes a
-        # machine, a disassembler, and registers its own halt handler.
-        # it could run in trap mode, taking snapshots of memory at every step
         print(f"[DEBUG] Machine Halted! - {str(self.trap_type)}")
         if self.trap_handler is not None:
             self.trap_handler(self, self.trap_type)

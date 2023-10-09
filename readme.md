@@ -1,17 +1,17 @@
-# yan85 disassembler and virtual machine
+# yan85 emulator, disassembler and timeless debuggger
 
-the code is all defined inside the yan85 package
+This project implements a Terminal user interface for the reverse engineering
+of yan85 programs, the pwncollege custom architetcture.
 
-```
-yan85/
-  L_ utils.py
-  L_ machine.py      # Machine class, implementing a yan85 virtual machine. 
-                     # the machine does not know anything about disassemblers
-                     # it just executes code.
-  L_ disassembler.py # a recursive descent disassembler, that
-                       uses the Machine class to emulate the code
-                       and understand its flow
-```
+Project Modules:
+
+It's composed of an emulator and a Disassembler python modules, which can
+be used individually in reverse engineering scripts.
+A simple TUI debugger with time travel support is implemented based on those classes
+
+<p align="center">
+<img src="./docs/screen1.png" width="600px" height="auto" />
+</p>
 
 ## example usage
 
