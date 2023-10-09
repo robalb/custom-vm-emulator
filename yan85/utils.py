@@ -12,6 +12,10 @@ LIGHT_GRAY = "\033[37m"
 DARK_GRAY = "\033[90m"
 EXTRA_DARK_GRAY = "\033[2m"
 
+
+BLUE_COMMENT = "\033[38;5;210m"
+BLUE_COMMENT = "\033[38;5;177m"
+
 # ANSI escape codes for text styles
 BOLD = "\033[1m"
 ITALIC = "\033[3m"

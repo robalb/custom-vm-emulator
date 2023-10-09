@@ -11,7 +11,7 @@ class Debugger:
     disassembler: Disassembler
 
     #scroll effect: 0= disabled, 1= follow jumps, 2 follow cursor
-    scroll_effect = 2
+    scroll_effect = 1
     previous_line = 0
 
     #machine snapshots for time travel

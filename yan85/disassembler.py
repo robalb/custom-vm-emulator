@@ -116,12 +116,13 @@ class Disassembler:
             if instr_addr in self.comments:
                 comment = self.comments[instr_addr]
                 margin = " "*7
+                color = ITALIC + BLUE_COMMENT
                 if comment[0] == " ":
-                    ret += f"{margin}{self.comments[instr_addr]}\n"
+                    ret += f"{color}{margin}{self.comments[instr_addr]}{RESET_COLOR}\n"
                 else:
-                    ret += f"{margin}******************************\n"
-                    ret += f"{margin}**  {self.comments[instr_addr]}\n"
-                    ret += f"{margin}******************************\n"
+                    ret += f"{color}{margin}******************************\n{RESET_COLOR}"
+                    ret += f"{color}{margin}**  {self.comments[instr_addr]}\n{RESET_COLOR}"
+                    ret += f"{color}{margin}******************************\n{RESET_COLOR}"
             ret += self.siderbar_line(entity)
             ret += entity.readable()
             ret += "\n"

@@ -78,7 +78,6 @@ machine.load_code(code_dump)
 
 
 breaks = [
-        0x5a,
         0x1aa,
 
         ]
@@ -87,9 +86,17 @@ comments = {
         # 0x1f8: "main function"
         0x3: "incorrect()",
         0x213: "save key to memory",
+        0xba: "correct()",
         0x5a: "read user input",
         0x1aa: "parte losca",
-        0x1d1: " dest jmp parte losca",
+        0x1bc: " jmp ciao",
+        0x1d1: " ciao",
+        0x1f8: " if a!=b goto targetcmp_1",
+        0x20d: " targetcmp_1",
+
+        0x1bf: " targetpopi_1",
+        0x1c8: " if d==0: correct()",
+        0x1ce: " else: incorrect()",
         }
 
 debugger = Debugger(machine, breaks, comments)
