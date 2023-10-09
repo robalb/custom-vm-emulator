@@ -202,9 +202,9 @@ class Disassembler:
                         instr_entity.line_comment = f"'{chr(p2)}'"
 
             if instr_entity.instruction.opcode == Opcode.JMP:
-                p2 = instr_entity.params[1]
-                if isinstance(p2, int):
-                    flags = [f.value for f in self.machine._get_flags(p2)]
+                p1 = instr_entity.params[0]
+                if isinstance(p1, int):
+                    flags = [f.value for f in self.machine._get_flags(p1)]
                     flags = "".join(flags)
                     instr_entity.line_comment = f" ({flags})"
 

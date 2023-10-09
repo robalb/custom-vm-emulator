@@ -196,9 +196,9 @@ class Machine:
 
     class InstructionJMP(Instruction):
         opcode = Opcode.JMP
-        params = [Param.reg8, Param.imm8]
+        params = [Param.imm8, Param.reg8]
         description = """
-        JMP(reg, imm)
+        JMP(imm, reg)
           if imm8 == 0 || Register.f & imm8:
             Register.i = [reg]
           
@@ -413,11 +413,11 @@ class Machine:
         elif opcodes[opcode_byte] == Opcode.JMP:
             print("[DEBUG] JMP")
             flag_byte = self._read_register(Register.f)
-            if param2_byte == 0 or flag_byte & param2_byte == 0:
+            if param1_byte == 0 or flag_byte & param1_byte != 0:
                 # taken
                 self._write_register(
-                        Register.f,
-                        self._read_register(self._get_register(param1_byte))
+                        Register.i,
+                        self._read_register(self._get_register(param2_byte))
                         )
 
         elif opcodes[opcode_byte] == Opcode.SYS:
