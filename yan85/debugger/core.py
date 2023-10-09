@@ -13,6 +13,10 @@ class Debugger:
     scroll_effect = 2
     previous_line = 0
 
+    #machine snapshots for time travel
+    vmem_snapshots = []
+    current_snapshot = 0
+
     def __init__(self, machine: Machine):
         #init machine
         self.machine = machine
@@ -27,6 +31,7 @@ class Debugger:
         # init TUI
         self.tui = DebuggerTUI()
         self.tui.stepi_callback = self.stepi_callback
+        self.tui.reverse_stepi_callback = self.reverse_stepi_callback
         self.tui.context_callback = self.context_callback
         self.tui.ready_callback = self.ready_callback
         
@@ -107,7 +112,20 @@ class Debugger:
         self.update_code()
 
     def stepi_callback(self):
+        #record a snapshot ot the current machine state
+        self.vmem_snapshots.append(self.machine.vmem[::])
+        # run the machine
         self.machine.run_loop()
+
+    def reverse_stepi_callback(self):
+        #restore previous machine state
+        if len(self.vmem_snapshots) > 0:
+            vmem = self.vmem_snapshots.pop()
+            self.machine.vmem = vmem[::]
+            # we pretend the machine executed, and called the trap handler
+            self.trap_handler(TrapType.trap_mode)
+        else:
+            self.print(f"Reached end of the recording (c to print context)")
 
     def context_callback(self):
         self.update_info()
