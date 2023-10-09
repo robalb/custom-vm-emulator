@@ -23,7 +23,7 @@ class Debugger:
     breaks: List[int] = []
     continue_until_break = False
 
-    def __init__(self, machine: Machine, breaks):
+    def __init__(self, machine: Machine, breaks, comments={}):
         #init machine
         self.machine = machine
         self.machine.trap_mode_enabled = True
@@ -32,7 +32,7 @@ class Debugger:
         self.machine.set_trap_handler(handler)
 
         #init disassembler
-        self.disassembler = Disassembler(machine)
+        self.disassembler = Disassembler(machine, comments=comments)
 
         #init debugger
         self.breaks = breaks

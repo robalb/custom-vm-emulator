@@ -78,7 +78,10 @@ class Disassembler:
     #such as the register name order. It change from machine to machine
     machine: Machine
 
-    def __init__(self, machine: Machine):
+    comments = {}
+
+    def __init__(self, machine: Machine, comments={}):
+        self.comments = comments
         self.machine = machine
 
     def _byte_at(self, addr):
@@ -110,6 +113,15 @@ class Disassembler:
             #pop an instruction from the stack
             instr_addr = self.instr_stack.pop()
             entity = self.disass_instruction(instr_addr)
+            if instr_addr in self.comments:
+                comment = self.comments[instr_addr]
+                margin = " "*7
+                if comment[0] == " ":
+                    ret += f"{margin}{self.comments[instr_addr]}\n"
+                else:
+                    ret += f"{margin}******************************\n"
+                    ret += f"{margin}**  {self.comments[instr_addr]}\n"
+                    ret += f"{margin}******************************\n"
             ret += self.siderbar_line(entity)
             ret += entity.readable()
             ret += "\n"

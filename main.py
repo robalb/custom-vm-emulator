@@ -78,12 +78,36 @@ machine.load_code(code_dump)
 
 
 breaks = [
-        0x1f8
+        0x5a,
+        0x1aa,
+
         ]
 
-debugger = Debugger(machine, breaks)
+comments = {
+        # 0x1f8: "main function"
+        0x3: "incorrect()",
+        0x213: "save key to memory",
+        0x5a: "read user input",
+        0x1aa: "parte losca",
+        0x1d1: " dest jmp parte losca",
+        }
+
+debugger = Debugger(machine, breaks, comments)
 
 
+"""
+parte losca
+
+b = 0xa0
+a = 0x30
+c = 0x6
+d = i+2
+push d
+
+
+
+
+"""
 
 
 #dis = Disassembler(machine)
