@@ -46,8 +46,30 @@ code_dump = """
 40 40 8e 00 00 00 00 00 00 00 00 00 00 00 00 00
 """
 
+
+"""
+key = [
+    0xB9, 0x42, 0xB5, 0x01, 0xDD, 0x7B, 0x7A, 0xEE
+    ]
+
+using stdin:
+    41 42 43 44 45 46 47 48
+    A  B  C  D  E  F  G  H
+
+comaprison line 01ec:
+    46 0xee
+    45 0x7a
+
+
+"""
+
+stdin_buffer = b"AB\xdd\x7b\x7a\xeeGH"
+stdin_buffer = b"\xb5\x01\xdd\x7b\x7a\xeeGH"
+stdin_buffer+= b"flag{aaaaaaaaaaaaaaaaaa}"
+
 # initialze a yan85 machine
 machine = Machine(
+        stdin_buffer = stdin_buffer,
         vmem_bytes = 1080,
         code_base_address = 0,
         registers_base_address = 0x400,
@@ -78,17 +100,17 @@ machine.load_code(code_dump)
 
 
 breaks = [
-        0x1aa,
-
-        ]
+    #0xa5,  #read syscall
+    0x1aa, #decompile
+    0x1ec, #cmp
+    ]
 
 comments = {
-        # 0x1f8: "main function"
         0x3: "incorrect()",
         0x213: "save key to memory",
         0xba: "correct()",
         0x5a: "read user input",
-        0x1aa: "parte losca",
+        0x1aa: "comparison",
         0x1bc: " jmp ciao",
         0x1d1: " ciao",
         0x1f8: " if a!=b goto targetcmp_1",
@@ -101,20 +123,6 @@ comments = {
 
 debugger = Debugger(machine, breaks, comments)
 
-
-"""
-parte losca
-
-b = 0xa0
-a = 0x30
-c = 0x6
-d = i+2
-push d
-
-
-
-
-"""
 
 
 #dis = Disassembler(machine)

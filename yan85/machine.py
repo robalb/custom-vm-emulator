@@ -120,6 +120,8 @@ class Machine:
     # this callback is executed every time a trap is reached
     trap_handler: Callable|None = None
 
+    stdin_buffer = b""
+
     class InstructionIMM(Instruction):
         opcode = Opcode.IMM
         params = [Param.reg8, Param.imm8]
@@ -238,7 +240,8 @@ class Machine:
                  registers_base_address=conf['registers_base_address'],
                  memory_base_address=conf['memory_base_address'],
                  register_bytes=conf['register_bytes'],
-                 opcode_bytes=conf['opcode_bytes']
+                 opcode_bytes=conf['opcode_bytes'],
+                 stdin_buffer=stdin_buffer,
                  ):
         self.conf['vmem_bytes'] = vmem_bytes
         self.conf['code_base_address'] = code_base_address
@@ -248,6 +251,7 @@ class Machine:
         self.conf['opcode_bytes'] = opcode_bytes
         #initialize the virtual memory
         self.reset_memory()
+        self.stdin_buffer = stdin_buffer
 
 
     def reset_memory(self):
@@ -424,14 +428,15 @@ class Machine:
             print("[DEBUG] SYS")
             if param1_byte in self.conf['syscall_bytes']:
                 syscall = self.conf['syscall_bytes'][param1_byte]
+                reg = self._get_register(param2_byte)
                 if syscall == Syscall.exit:
                     self._syscall_exit()
                 if syscall == Syscall.sleep:
                     self._syscall_sleep()
                 if syscall == Syscall.read_code:
-                    self._syscall_read_code()
+                    self._syscall_read_code(reg)
                 if syscall == Syscall.read_memory:
-                    self._syscall_read_memory()
+                    self._syscall_read_memory(reg)
                 if syscall == Syscall.open:
                     self._syscall_open()
                 if syscall == Syscall.write:
@@ -440,17 +445,39 @@ class Machine:
 
     def _syscall_exit(self):
         self._set_trap(TrapType.program_exit)
-    def _syscall_sleep(self):
-        pass
-    def _syscall_read_code(self):
+
+    def _syscall_read_memory(self, reg: Register):
+        """
+          read from filedescriptor C bytes into memory
+          read(
+            fd    = regA (0x100)
+            &buff = regB (0x101) + memory_offset
+            size  = regC (0x102)
+          )
+          reg2 = num of bytes read
+        """
+        stdin_buffer = self.stdin_buffer
+        fd = self._read_register(Register.A)
+        write_address = self._read_register(Register.B)
+        bytes = self._read_register(Register.C)
+        read = 0
+        for i in range(bytes):
+            if i >= len(stdin_buffer):
+                return
+            read += 1
+            byte = stdin_buffer[i]
+            self._write_memory(write_address+i, byte)
+        self._write_register(reg, read)
+        
+    def _syscall_read_code(self, reg: Register):
         pass
     def _syscall_write_code(self):
-        pass
-    def _syscall_read_memory(self):
         pass
     def _syscall_open(self):
         pass
     def _syscall_write(self):
+        pass
+    def _syscall_sleep(self):
         pass
 
 
