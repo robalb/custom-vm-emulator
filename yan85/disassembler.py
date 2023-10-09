@@ -56,7 +56,12 @@ class Entity:
                 if param == Register.N:
                     params_str[i] = f"{DARK_GRAY}N{RESET_COLOR}"
 
-        data = f"{DARK_GRAY}{bytes}{RESET_COLOR} {opcode}   {params_str[0]} {params_str[1]}"
+        #highlight CMP instructions
+        opcode_color = RESET_COLOR
+        if self.instruction.opcode == Opcode.CMP:
+            opcode_color = YELLOW
+
+        data = f"{DARK_GRAY}{bytes}{RESET_COLOR} {opcode_color}{opcode}{RESET_COLOR}   {params_str[0]} {params_str[1]}"
         ret = f"{self.address:04X}  {data}"
         ret += f"    {DARK_GRAY}{self.line_comment}{RESET_COLOR}"
         return ret

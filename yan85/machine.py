@@ -117,7 +117,6 @@ class Machine:
     trap_reason: TrapType|None = None
     # when true, set trap every time an instruction runs
     trap_mode_enabled = False
-
     # this callback is executed every time a trap is reached
     trap_handler: Callable|None = None
 

@@ -1,7 +1,7 @@
 from .tui_interface import DebuggerTUI, Info, HexDumpLine, CodeLine, CodeScroll
 from ..machine import Machine, Opcode, Register, TrapType
 from ..disassembler import Disassembler
-# from ..utils import hexdump
+from ..utils import *
 
 class Debugger:
 
@@ -60,7 +60,7 @@ class Debugger:
         reg = self.machine._read_register(Register.D)
         res += f"D:{hex(reg)}  "
         reg = self.machine._read_register(Register.s)
-        res += f"s:{hex(reg)}  "
+        res += f"{YELLOW}s{RESET_COLOR}:{hex(reg)}  "
         reg = self.machine._read_register(Register.f)
         res += f"f:{hex(reg)} ({flags}) "
         res += "       (s: step   r: reverse step   ctrl+c: quit)"
@@ -97,7 +97,10 @@ class Debugger:
             self.tui.query_one(CodeScroll).scroll_to(y=line-sub, speed=800)
 
     def update_hexdump(self):
+        stack_address =self.machine._read_register(Register.s) + self.machine.conf['memory_base_address']
         self.tui.query_one(HexDumpLine).data = self.machine.vmem[::]
+        self.tui.query_one(HexDumpLine).stack_address = stack_address
+
 
     def ready_callback(self):
         self.update_hexdump()

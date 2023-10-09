@@ -10,20 +10,27 @@ class HexDumpLine(Static):
     """print a hexdump from the data list. if the data is updated, the hexdump will update"""
     data = reactive([0]*1500) #add layout=True to fir for future data size changes
 
+    stack_address = reactive(0)
+
     def generate_hexdump(self):
+        current_address = 0
         data = self.data
         pad = "    "
         ret = ""
         for i in range(0, len(data), 16):
             hex_vals = []
             ascii_vals = []
-
             for j in range(i, min(i + 16, len(data))):
                 val = data[j]
-                if val == 0:
-                    hex_vals.append(f"{DARK_GRAY}00{RESET_COLOR}")
+                if current_address == self.stack_address:
+                    color = YELLOW
+                elif val == 0:
+                    color = DARK_GRAY
                 else:
-                    hex_vals.append(f"{val:02X}")
+                    color = RESET_COLOR
+                current_address += 1
+
+                hex_vals.append(f"{color}{val:02X}{RESET_COLOR}")
                 ascii_vals.append(chr(val) if ord(' ') <= val <= ord('~') else ".")
 
             hex_padding = ""
@@ -137,8 +144,8 @@ class Info(Static):
 
     txt = reactive("Debugger ready.   s: step   c: context   r: reverse step")
 
-    def render(self)->str:
-        return f" {self.txt}"
+    def render(self)->Text:
+        return Text.from_ansi(" " + self.txt)
 
 
 
