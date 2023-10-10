@@ -1,6 +1,6 @@
 # yan85 emulator, disassembler and time-travel debugger
 
-This project implements a set of tools for the reverse engineering
+This is a set of tools I implemented for the reverse engineering
 of yan85, the custom architecture used for vm-based obfuscation challenges in pwn.college
 
 ## Project Modules:
