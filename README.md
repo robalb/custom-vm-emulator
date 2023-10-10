@@ -1,4 +1,4 @@
-# yan85 emulator, disassembler and timeless debuggger
+# yan85 emulator, disassembler and time-travel debugger
 
 This project implements a set of tools for the reverse engineering
 of yan85, the custom architecture used for vm-based obfuscation challenges in pwn.college
@@ -7,7 +7,7 @@ of yan85, the custom architecture used for vm-based obfuscation challenges in pw
 
 - `yan85.machine` A highly extensible yan85 emulator, with support for single-step execution mode
 - `yan85.disassembler` Simple disassembler that extends the given yan85 emulator
-- `yan85.debugger` A TUI program based on the textual python library. It provides a time travel debugger with a scrollable view of the program memory and code disassembly
+- `yan85.debugger` A TUI program based on the textual python library. It provides a fully scriptable time-travel debugger with a scrollable view of the program memory and code disassembly
 
 <p align="center">
 <img src="./docs/screen2.png" width="900px" height="auto" />
