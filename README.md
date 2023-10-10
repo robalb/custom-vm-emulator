@@ -10,7 +10,7 @@ of yan85, the custom architecture used for vm-based obfuscation challenges in pw
 - `yan85.debugger` A TUI program based on the textual python library. It provides a time travel debugger with a scrollable view of the program memory and code disassembly
 
 <p align="center">
-<img src="./docs/screen1.png" width="900px" height="auto" />
+<img src="./docs/screen2.png" width="900px" height="auto" />
 </p>
 
 ## example usage

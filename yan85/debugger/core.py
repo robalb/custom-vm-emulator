@@ -96,7 +96,7 @@ class Debugger:
         reg = self.machine._read_register(Register.D)
         res += f"D:{hex(reg)}  "
         reg = self.machine._read_register(Register.s)
-        res += f"{YELLOW}s{RESET_COLOR}:{hex(reg)}  "
+        res += f"{RESET_COLOR}s{RESET_COLOR}:{hex(reg)}  "
         reg = self.machine._read_register(Register.f)
         res += f"f:{hex(reg)} ({flags}) "
         res += "       (s: step   r: reverse step   ctrl+c: quit)"

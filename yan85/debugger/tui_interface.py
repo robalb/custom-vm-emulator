@@ -23,7 +23,7 @@ class HexDumpLine(Static):
             for j in range(i, min(i + 16, len(data))):
                 val = data[j]
                 if current_address == self.stack_address:
-                    color = YELLOW
+                    color = INVERT
                 elif val == 0:
                     color = DARK_GRAY
                 else:

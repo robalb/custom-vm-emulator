@@ -111,8 +111,8 @@ comments = {
         0xba: "correct()",
         0x5a: "read user input",
         0x1aa: "comparison",
-        0x1bc: " jmp ciao",
-        0x1d1: " ciao",
+        0x1bc: " jmp compare()",
+        0x1d1: "compare()",
         0x1f8: " if a!=b goto targetcmp_1",
         0x20d: " targetcmp_1",
 

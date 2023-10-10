@@ -16,7 +16,7 @@ class Entity:
     #instruction only parameters
     instruction: Instruction
     params: List[Register|int|None] = [None, None]
-    dynamic_branches=False
+    changes_flow=False
     branches = []
 
     def __init__(self, type: Type, address, bytes):
@@ -59,7 +59,7 @@ class Entity:
         #highlight CMP instructions
         opcode_color = RESET_COLOR
         if self.instruction.opcode == Opcode.CMP:
-            opcode_color = YELLOW
+            opcode_color = OPCODE_HIGHLIGHT_COLOR
 
         data = f"{DARK_GRAY}{bytes}{RESET_COLOR} {opcode_color}{opcode}{RESET_COLOR}   {params_str[0]} {params_str[1]}"
         ret = f"{self.address:04X}  {data}"
@@ -115,10 +115,12 @@ class Disassembler:
             entity = self.disass_instruction(instr_addr)
             if instr_addr in self.comments:
                 comment = self.comments[instr_addr]
-                margin = " "*7
-                color = ITALIC + BLUE_COMMENT
+                margin = " "*9
+                color = ITALIC + COMMENT_COLOR
+                if entity.changes_flow:
+                    color = ITALIC + FLOW_LINES_COLOR
                 if comment[0] == " ":
-                    ret += f"{color}{margin}{self.comments[instr_addr]}{RESET_COLOR}\n"
+                    ret += f"{color}{margin}{self.comments[instr_addr][1:]}{RESET_COLOR}\n"
                 else:
                     ret += f"{color}{margin}******************************\n{RESET_COLOR}"
                     ret += f"{color}{margin}**  {self.comments[instr_addr]}\n{RESET_COLOR}"
@@ -137,16 +139,16 @@ class Disassembler:
     def siderbar_line(self, entity)->str:
         instr_addr = self.machine._read_register(Register.i) * 3
         is_current = entity.address == instr_addr
-        runs = 0
 
         if is_current:
             is_current = ">>"
         else:
             is_current = "  "
-        if runs == 0:
-            runs = "  "
+        if entity.changes_flow:
+            way = "--"
+            runs = f"{FLOW_LINES_COLOR}{way}{RESET_COLOR}"
         else:
-            runs = f"{BLUE}{runs:02}{RESET_COLOR}"
+            runs = "  "
         return f"   {is_current} {runs} "
 
 
@@ -195,6 +197,7 @@ class Disassembler:
                 p1 = instr_entity.params[0]
                 p2 = instr_entity.params[1]
                 if isinstance(p1, Register) and isinstance(p2, Register):
+                    #generate comment
                     if p1 == Register.N and p2 == Register.N:
                         comment = "nop"
                     elif p2 == Register.N:
@@ -204,6 +207,9 @@ class Disassembler:
                     else:
                         comment = f"{p1.value} = {p2.value}"
                     instr_entity.line_comment = comment
+                    #check effect on instruction flow
+                    if p1 == Register.i or p2 == Register.i:
+                        instr_entity.changes_flow = True
 
             if instr_entity.instruction.opcode == Opcode.IMM:
                 p1 = instr_entity.params[0]
@@ -211,10 +217,12 @@ class Disassembler:
                 if isinstance(p1, Register) and isinstance(p2, int):
                     if p1 == Register.i:
                         instr_entity.line_comment = f"JMP {hex(p2*3)}"
+                        instr_entity.changes_flow = True
                     elif p2 >= ord(' ') and p2 <= ord('~'):
                         instr_entity.line_comment = f"'{chr(p2)}'"
 
             if instr_entity.instruction.opcode == Opcode.JMP:
+                instr_entity.changes_flow = True
                 p1 = instr_entity.params[0]
                 if isinstance(p1, int):
                     flags = [f.value for f in self.machine._get_flags(p1)]
