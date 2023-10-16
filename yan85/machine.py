@@ -91,9 +91,9 @@ class Machine:
             0x40: Register.f,
         },
         'instruction_bytes_order': {
-            0: InstructionByte.opcode,
-            1: InstructionByte.param1,
-            2: InstructionByte.param2
+            InstructionByte.opcode: 0,
+            InstructionByte.param1: 1,
+            InstructionByte.param2: 2,
         },
         'opcode_bytes': {
             0x0:  Opcode.IMM,
@@ -252,6 +252,8 @@ class Machine:
                  register_bytes=conf['register_bytes'],
                  opcode_bytes=conf['opcode_bytes'],
                  instruction_bytes_order=conf['instruction_bytes_order'],
+                 flag_bytes=conf['flag_bytes'],
+                 syscall_bytes=conf['syscall_bytes'],
                  stdin_buffer=stdin_buffer,
                  ):
         self.conf['vmem_bytes'] = vmem_bytes
@@ -261,6 +263,8 @@ class Machine:
         self.conf['register_bytes'] = register_bytes
         self.conf['opcode_bytes'] = opcode_bytes
         self.conf['instruction_bytes_order'] = instruction_bytes_order
+        self.conf['flag_bytes'] = flag_bytes
+        self.conf['syscall_bytes'] = syscall_bytes
         #initialize the virtual memory
         self.reset_memory()
         self.stdin_buffer = stdin_buffer
@@ -293,9 +297,10 @@ class Machine:
             #fetch instruction bytes
             pc = self._read_register(Register.i)
             instr_addr = pc * 3
-            opcode = self._read_vmem(instr_addr)
-            param1 = self._read_vmem(instr_addr+1)
-            param2 = self._read_vmem(instr_addr+2)
+            bytes_order = self.conf['instruction_bytes_order']
+            opcode = self._read_vmem(instr_addr + bytes_order[InstructionByte.opcode])
+            param1 = self._read_vmem(instr_addr + bytes_order[InstructionByte.param1])
+            param2 = self._read_vmem(instr_addr + bytes_order[InstructionByte.param2])
             #increment program counter
             self._write_register(Register.i, pc+1)
             #execute fetched instruction

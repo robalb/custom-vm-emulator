@@ -1,4 +1,4 @@
-from .machine import Machine, Param, Opcode, Register, Instruction
+from .machine import Machine, Param, Opcode, Register, Instruction, InstructionByte
 from enum import Enum
 from typing import List
 from .utils import *
@@ -153,10 +153,20 @@ class Disassembler:
 
 
     def disass_instruction(self, instr_addr) -> Entity:
+        real_instr_bytes = [
+            self._byte_at(instr_addr + 0),
+            self._byte_at(instr_addr + 1),
+            self._byte_at(instr_addr + 2),
+        ]
+        # normalizes the instruction bytes order, in order to always have
+        # instr_bytes[0] <- opcode
+        # instr_bytes[1] <- param1
+        # instr_bytes[2] <- param2
+        bytes_order = self.machine.conf['instruction_bytes_order']
         instr_bytes = [
-            self._byte_at(instr_addr),
-            self._byte_at(instr_addr+1),
-            self._byte_at(instr_addr+2),
+            self._byte_at(instr_addr + bytes_order[InstructionByte.opcode]),
+            self._byte_at(instr_addr + bytes_order[InstructionByte.param1]),
+            self._byte_at(instr_addr + bytes_order[InstructionByte.param2]),
         ]
         # print(f"[DEBUG] disass {hex(instr_addr)}: {hex(instr_bytes[0])} {hex(instr_bytes[1])} {hex(instr_bytes[2])}")
 
@@ -165,7 +175,7 @@ class Disassembler:
         instr_entity = Entity(
             Entity.Type.code,
             instr_addr,
-            instr_bytes
+            real_instr_bytes
             )
 
         if instruction is None:
@@ -244,7 +254,7 @@ class Disassembler:
             byte_entity = Entity(
                     Entity.Type.byte,
                     instr_addr,
-                    instr_bytes
+                    real_instr_bytes
                     )
             byte_entity.line_comment = disass_error
             return byte_entity
