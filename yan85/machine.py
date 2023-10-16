@@ -16,6 +16,11 @@ class Param(Enum):
     reg8="reg8"
     imm8="imm8"
 
+class InstructionByte(Enum):
+    opcode="opcode"
+    param1="param1"
+    param2="param2"
+
 class Register(Enum):
     A='A'
     B='B'
@@ -84,6 +89,11 @@ class Machine:
             0x10: Register.s,
             0x20: Register.i,
             0x40: Register.f,
+        },
+        'instruction_bytes_order': {
+            0: InstructionByte.opcode,
+            1: InstructionByte.param1,
+            2: InstructionByte.param2
         },
         'opcode_bytes': {
             0x0:  Opcode.IMM,
@@ -241,6 +251,7 @@ class Machine:
                  memory_base_address=conf['memory_base_address'],
                  register_bytes=conf['register_bytes'],
                  opcode_bytes=conf['opcode_bytes'],
+                 instruction_bytes_order=conf['instruction_bytes_order'],
                  stdin_buffer=stdin_buffer,
                  ):
         self.conf['vmem_bytes'] = vmem_bytes
@@ -249,6 +260,7 @@ class Machine:
         self.conf['memory_base_address'] = memory_base_address
         self.conf['register_bytes'] = register_bytes
         self.conf['opcode_bytes'] = opcode_bytes
+        self.conf['instruction_bytes_order'] = instruction_bytes_order
         #initialize the virtual memory
         self.reset_memory()
         self.stdin_buffer = stdin_buffer

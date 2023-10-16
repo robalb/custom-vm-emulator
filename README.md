@@ -78,11 +78,13 @@ p2 = (uint32_t) instruction >> 0x10 & ff
 
 ## references
 
-python packages:
-https://docs.python.org/3/tutorial/modules.html#packages
 
 urwid widgets
 https://urwid.org/manual/widgets.html#included-widgets
+
+https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+
+https://docs.python.org/3/tutorial/modules.html#packages
 
                     "0170    00 40 02 85 08 02 08 40 10 80 40 20 00 80 20 08    .@.....@..@ .. .",
                     "|| /--- 01CE  04 18 08  ??    04 24 08     JMP Invalid Register",
