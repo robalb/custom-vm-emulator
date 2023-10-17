@@ -63,15 +63,14 @@ class Instruction:
 class Machine:
     #machine virtual memory
     vmem = []
-    #all the configurations that can change in yan85
-    #machine variations
-    conf = {
-        'vmem_bytes': 0,
-        'code_base_address': 0x0,
-        'registers_base_address': 0x400,
-        'memory_base_address': 0x300,
-        #individual offset of each register from registers base address
-        'registers_address_offset': {
+    #all the configurations that can change in yan85 machine variations
+    # start with a "conf_" prefix
+    conf_vmem_bytes = 0
+    conf_code_base_address = 0x0
+    conf_registers_base_address = 0x400
+    conf_memory_base_address = 0x300
+    #individual offset of each register from registers base address
+    conf_registers_address_offset = {
             Register.A: 0x0,
             Register.B: 0x1,
             Register.C: 0x2,
@@ -79,8 +78,8 @@ class Machine:
             Register.s: 0x4,
             Register.i: 0x5,
             Register.f: 0x6,
-        },
-        'register_bytes': {
+            }
+    conf_register_bytes = {
             0x0:  Register.N,
             0x1:  Register.A,
             0x2:  Register.B,
@@ -89,13 +88,13 @@ class Machine:
             0x10: Register.s,
             0x20: Register.i,
             0x40: Register.f,
-        },
-        'instruction_bytes_order': {
+            }
+    conf_instruction_bytes_order = {
             InstructionByte.opcode: 0,
             InstructionByte.param1: 1,
             InstructionByte.param2: 2,
-        },
-        'opcode_bytes': {
+            }
+    conf_opcode_bytes = {
             0x0:  Opcode.IMM,
             0x1:  Opcode.ADD,
             0x2:  Opcode.STK,
@@ -104,15 +103,15 @@ class Machine:
             0x10: Opcode.CMP,
             0x20: Opcode.JMP,
             0x40: Opcode.SYS,
-            },
-        'flag_bytes': {
+            }
+    conf_flag_bytes = {
             0x1:  Flag.N,
             0x2:  Flag.E,
             0x4:  Flag.Z,
             0x8:  Flag.G,
             0x10: Flag.L
-            },
-        'syscall_bytes': {
+            }
+    conf_syscall_bytes = {
             0x20: Syscall.open,
             0x4:  Syscall.read_code,
             0x8:  Syscall.read_memory,
@@ -120,7 +119,6 @@ class Machine:
             0x1:  Syscall.sleep,
             0x2:  Syscall.exit,
             }
-        }
 
     # the machine was halted
     trap_halt = False
@@ -130,7 +128,7 @@ class Machine:
     # this callback is executed every time a trap is reached
     trap_handler: Callable|None = None
 
-    stdin_buffer = b""
+    stdin_buffer = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
 
     class InstructionIMM(Instruction):
         opcode = Opcode.IMM
@@ -244,37 +242,16 @@ class Machine:
             Opcode.SYS: InstructionSYS,
             }
 
-    def __init__(self, 
-                 vmem_bytes=conf['vmem_bytes'],
-                 code_base_address=conf['code_base_address'],
-                 registers_base_address=conf['registers_base_address'],
-                 memory_base_address=conf['memory_base_address'],
-                 register_bytes=conf['register_bytes'],
-                 opcode_bytes=conf['opcode_bytes'],
-                 instruction_bytes_order=conf['instruction_bytes_order'],
-                 flag_bytes=conf['flag_bytes'],
-                 syscall_bytes=conf['syscall_bytes'],
-                 stdin_buffer=stdin_buffer,
-                 ):
-        self.conf['vmem_bytes'] = vmem_bytes
-        self.conf['code_base_address'] = code_base_address
-        self.conf['registers_base_address'] = registers_base_address
-        self.conf['memory_base_address'] = memory_base_address
-        self.conf['register_bytes'] = register_bytes
-        self.conf['opcode_bytes'] = opcode_bytes
-        self.conf['instruction_bytes_order'] = instruction_bytes_order
-        self.conf['flag_bytes'] = flag_bytes
-        self.conf['syscall_bytes'] = syscall_bytes
+    def __init__(self):
         #initialize the virtual memory
         self.reset_memory()
-        self.stdin_buffer = stdin_buffer
 
 
     def reset_memory(self):
         """
         Set every byte in the virtual memory to zero
         """
-        self.vmem = [0] * self.conf['vmem_bytes']
+        self.vmem = [0] * self.conf_vmem_bytes
 
 
     def load_code(self, code_dump: str):
@@ -286,7 +263,7 @@ class Machine:
         """
         code_bytes = []
         dump_to_code_bytes(code_dump, code_bytes)
-        virtual_mmap(self.vmem, code_bytes, self.conf['code_base_address'])
+        virtual_mmap(self.vmem, code_bytes, self.conf_code_base_address)
 
 
     def run_loop(self):
@@ -297,7 +274,7 @@ class Machine:
             #fetch instruction bytes
             pc = self._read_register(Register.i)
             instr_addr = pc * 3
-            bytes_order = self.conf['instruction_bytes_order']
+            bytes_order = self.conf_instruction_bytes_order
             opcode = self._read_vmem(instr_addr + bytes_order[InstructionByte.opcode])
             param1 = self._read_vmem(instr_addr + bytes_order[InstructionByte.param1])
             param2 = self._read_vmem(instr_addr + bytes_order[InstructionByte.param2])
@@ -329,7 +306,7 @@ class Machine:
         This methid takes 3 bytes and interprets them as a yan85 instruction
         Note: ian85 has fixed-size, 3 bytes instructions.
         """
-        opcodes = self.conf['opcode_bytes']
+        opcodes = self.conf_opcode_bytes
 
         print(f"[DEBUG] running: {hex(opcode_byte)} {hex(param1_byte)} {hex(param2_byte)} ")
 
@@ -407,7 +384,7 @@ class Machine:
 
         elif opcodes[opcode_byte] == Opcode.CMP:
             print("[DEBUG] CMP")
-            flag_to_byte = {v: k for k, v in self.conf['flag_bytes'].items()}
+            flag_to_byte = {v: k for k, v in self.conf_flag_bytes.items()}
             ret= 0
             reg1 = self._get_register(param1_byte)
             reg2 = self._get_register(param2_byte)
@@ -443,21 +420,21 @@ class Machine:
 
         elif opcodes[opcode_byte] == Opcode.SYS:
             print("[DEBUG] SYS")
-            if param1_byte in self.conf['syscall_bytes']:
-                syscall = self.conf['syscall_bytes'][param1_byte]
+            if param1_byte in self.conf_syscall_bytes:
+                syscall = self.conf_syscall_bytes[param1_byte]
                 reg = self._get_register(param2_byte)
                 if syscall == Syscall.exit:
                     self._syscall_exit()
                 if syscall == Syscall.sleep:
-                    self._syscall_sleep()
+                    self._syscall_sleep(reg)
                 if syscall == Syscall.read_code:
                     self._syscall_read_code(reg)
                 if syscall == Syscall.read_memory:
                     self._syscall_read_memory(reg)
                 if syscall == Syscall.open:
-                    self._syscall_open()
+                    self._syscall_open(reg)
                 if syscall == Syscall.write:
-                    self._syscall_write()
+                    self._syscall_write(reg)
 
 
     def _syscall_exit(self):
@@ -466,7 +443,7 @@ class Machine:
     def _syscall_read_memory(self, reg: Register):
         """
           read from filedescriptor C bytes into memory
-          read(
+          libc.read(
             fd    = regA (0x100)
             &buff = regB (0x101) + memory_offset
             size  = regC (0x102)
@@ -476,25 +453,23 @@ class Machine:
         stdin_buffer = self.stdin_buffer
         fd = self._read_register(Register.A)
         write_address = self._read_register(Register.B)
-        bytes = self._read_register(Register.C)
+        requested_size = self._read_register(Register.C)
         read = 0
-        for i in range(bytes):
-            if i >= len(stdin_buffer):
-                return
-            read += 1
+        for i in range(min(requested_size, len(stdin_buffer))):
+            read = i+1
             byte = stdin_buffer[i]
             self._write_memory(write_address+i, byte)
         self._write_register(reg, read)
-        
+
     def _syscall_read_code(self, reg: Register):
         pass
-    def _syscall_write_code(self):
+    def _syscall_write_code(self, reg: Register):
         pass
-    def _syscall_open(self):
+    def _syscall_open(self, reg: Register):
         pass
-    def _syscall_write(self):
+    def _syscall_write(self, reg: Register):
         pass
-    def _syscall_sleep(self):
+    def _syscall_sleep(self, reg: Register):
         pass
 
 
@@ -505,7 +480,7 @@ class Machine:
 
     def _byte(self, data:int):
         """
-        we are using python Int to simulate c uint8_t,
+        we are using python Int to simulate c int8_t,
         wich off course will have completely different math.
         We fix it by wrapping every math operation with this modulo.
         This is easier than using ctypes
@@ -515,9 +490,9 @@ class Machine:
 
     def _get_flags(self, flag_byte) -> List[Flag]:
         ret = []
-        for flag in self.conf['flag_bytes']:
+        for flag in self.conf_flag_bytes:
             if flag_byte & flag:
-                ret.append(self.conf['flag_bytes'][flag])
+                ret.append(self.conf_flag_bytes[flag])
         return ret
 
 
@@ -529,8 +504,8 @@ class Machine:
         If the given byte is not a register,
         Register.A is returned and the trap bit is set
         """
-        if byte in self.conf['register_bytes']:
-            return self.conf['register_bytes'][byte]
+        if byte in self.conf_register_bytes:
+            return self.conf_register_bytes[byte]
         else:
             self._set_trap(TrapType.invalid_register)
             return Register.A
@@ -544,7 +519,6 @@ class Machine:
         If the given addr is invalid, 
         nothing is written and the trap bit is set
         """
-        # addr += self.conf['memory_base_address']
         if addr >= len(self.vmem):
             print(f"[DEBUG] invalid address write: {hex(addr)}")
             self._set_trap(TrapType.invalid_write)
@@ -568,14 +542,14 @@ class Machine:
 
 
     def _write_register(self, reg: Register, data: int):
-        address = self.conf['registers_base_address']
-        address += self.conf['registers_address_offset'][reg]
+        address = self.conf_registers_base_address
+        address += self.conf_registers_address_offset[reg]
         self._write_vmem(address, data)
 
 
     def _read_register(self, reg: Register):
-        address = self.conf['registers_base_address']
-        address += self.conf['registers_address_offset'][reg]
+        address = self.conf_registers_base_address
+        address += self.conf_registers_address_offset[reg]
         return self._read_vmem(address)
 
 
@@ -584,7 +558,7 @@ class Machine:
         Write a single byte to the memory segment
         (addr + memory_base_address)
         """
-        addr += self.conf['memory_base_address']
+        addr += self.conf_memory_base_address
         self._write_vmem(addr, data)
 
 
@@ -593,6 +567,6 @@ class Machine:
         Read a single byte from the memory segment
         (addr + memory_base_address)
         """
-        addr += self.conf['memory_base_address']
+        addr += self.conf_memory_base_address
         return self._read_vmem(addr)
 

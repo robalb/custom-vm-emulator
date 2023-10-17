@@ -88,18 +88,18 @@ class Disassembler:
         return self.machine.vmem[addr]
 
     def _get_instructionClass(self, opcode_byte)-> Instruction|None:
-        if opcode_byte not in self.machine.conf['opcode_bytes']:
+        if opcode_byte not in self.machine.conf_opcode_bytes:
             return None
         else:
-            opcode = self.machine.conf['opcode_bytes'][opcode_byte]
+            opcode = self.machine.conf_opcode_bytes[opcode_byte]
             instructionClass = self.machine.instructions[opcode]
             return instructionClass
 
     def _get_register(self, param_byte) -> Register|None:
-        if param_byte not in self.machine.conf['register_bytes']:
+        if param_byte not in self.machine.conf_register_bytes:
             return None
         else:
-            return self.machine.conf['register_bytes'][param_byte]
+            return self.machine.conf_register_bytes[param_byte]
 
     def disassemble(self)->str:
         ret = ""
@@ -108,7 +108,7 @@ class Disassembler:
         self.vmem_mapping = {}
         self.entities = {}
         #disassemble based on the current machine state.
-        self.instr_stack.append(self.machine.conf['code_base_address'])
+        self.instr_stack.append(self.machine.conf_code_base_address)
         while len(self.instr_stack) > 0:
             #pop an instruction from the stack
             instr_addr = self.instr_stack.pop()
@@ -162,7 +162,7 @@ class Disassembler:
         # instr_bytes[0] <- opcode
         # instr_bytes[1] <- param1
         # instr_bytes[2] <- param2
-        bytes_order = self.machine.conf['instruction_bytes_order']
+        bytes_order = self.machine.conf_instruction_bytes_order
         instr_bytes = [
             self._byte_at(instr_addr + bytes_order[InstructionByte.opcode]),
             self._byte_at(instr_addr + bytes_order[InstructionByte.param1]),
@@ -242,7 +242,7 @@ class Disassembler:
             if instr_entity.instruction.opcode == Opcode.SYS:
                 p1 = instr_entity.params[0]
                 if isinstance(p1, int):
-                    syscall_bytes = self.machine.conf['syscall_bytes']
+                    syscall_bytes = self.machine.conf_syscall_bytes
                     if p1 not in syscall_bytes:
                         disass_error = f"syscall  Invalid number {hex(p1)}"
                     else:
