@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Dict
 from .utils import *
 import re
+from copy import deepcopy
 
 
 language_specs = """
@@ -142,14 +143,15 @@ class Assembler:
 
         # parse all the tokens between a newline into an instruction
         instructions = []
-        awaiting_labels = []
+        self.awaiting_labels = []
         current_instruction_tokens = []
         for i in range(len(tokens)):
             if tokens[i].type in (TokenType.NEWLINE, TokenType.EOF):
                 if len(current_instruction_tokens) > 0:
-                    res = self.parse_instruction(current_instruction_tokens, awaiting_labels)
-                    instructions.append(res)
+                    res = self.parse_instruction(current_instruction_tokens)
                     current_instruction_tokens = []
+                    if res  is not None:
+                        instructions.append(res)
             else:
                 current_instruction_tokens.append(tokens[i])
 
@@ -200,7 +202,7 @@ class Assembler:
         raise Exception(f"Cannot convert to bytes syscall {str}")
 
 
-    def parse_instruction(self, tokens: List[Token], awaiting_labels):
+    def parse_instruction(self, tokens: List[Token]):
         """
         todo: doc
         """
@@ -222,7 +224,7 @@ class Assembler:
         if len(tokens) == 1 and tokens[0].type == TokenType.LABEL:
             # add it to the waiting list. it will be attached to the next
             # valid instruction
-            awaiting_labels.append(tokens[0].value)
+            self.awaiting_labels.append(tokens[0].value)
             return
 
         # pseudo instruction
@@ -230,36 +232,44 @@ class Assembler:
         if tokens[0].value == "PUSH":
             if len(tokens) != 2:
                 raise Exception(f"{base_error_message} invalid arguments count")
-            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
-            instr.bytes.append(self.register_to_byte(Register.N.value))
-            instr.bytes.append(self.register_to_byte(tokens[1].value))
+            instr.bytes = [
+                    self.opcode_to_byte(Opcode.STK.value),
+                    self.register_to_byte(Register.N.value),
+                    self.register_to_byte(tokens[1].value)
+                    ]
 
         # pseudo instruction
         # POP Reg = STK Reg N
         elif tokens[0].value == "POP":
             if len(tokens) != 2:
                 raise Exception(f"{base_error_message} invalid arguments count")
-            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
-            instr.bytes.append(self.register_to_byte(tokens[1].value))
-            instr.bytes.append(self.register_to_byte(Register.N.value))
+            instr.bytes = [
+                    self.opcode_to_byte(Opcode.STK.value),
+                    self.register_to_byte(tokens[1].value),
+                    self.register_to_byte(Register.N.value)
+                    ]
 
         # pseudo instruction
         # NOP = STK N N
         elif tokens[0].value == "NOP":
             if len(tokens) != 1:
                 raise Exception(f"{base_error_message} invalid arguments count")
-            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
-            instr.bytes.append(self.register_to_byte(Register.N.value))
-            instr.bytes.append(self.register_to_byte(Register.N.value))
+            instr.bytes = [
+                    self.opcode_to_byte(Opcode.STK.value),
+                    self.register_to_byte(Register.N.value),
+                    self.register_to_byte(Register.N.value)
+                    ]
 
         # pseudo instruction
         # J_{flags} Reg = JMP {flags} Reg
         elif tokens[0].value.startswith("J_"):
             if len(tokens) != 2:
                 raise Exception(f"{base_error_message} invalid arguments count")
-            instr.bytes.append(self.opcode_to_byte(Opcode.JMP.value))
-            instr.bytes.append(self.pseudo_JMP_to_byte(tokens[0].value))
-            instr.bytes.append(self.register_to_byte(tokens[1].value))
+            instr.bytes = [
+                    self.opcode_to_byte(Opcode.JMP.value),
+                    self.pseudo_JMP_to_byte(tokens[0].value),
+                    self.register_to_byte(tokens[1].value)
+                    ]
 
         # pseudo instruction
         # decorated STM with square brackets
@@ -267,9 +277,11 @@ class Assembler:
         elif tokens[0].value == Opcode.STM.value and len(tokens) == 5:
             if (tokens[1].type == TokenType.SQUARE_OPEN and
                 tokens[3].type == TokenType.SQUARE_CLOSE):
-                instr.bytes.append(self.opcode_to_byte(tokens[0].value))
-                instr.bytes.append(self.register_to_byte(tokens[2].value))
-                instr.bytes.append(self.register_to_byte(tokens[4].value))
+                instr.bytes = [
+                        self.opcode_to_byte(tokens[0].value),
+                        self.register_to_byte(tokens[2].value),
+                        self.register_to_byte(tokens[4].value)
+                        ]
             elif (tokens[2].type == TokenType.SQUARE_OPEN and
                 tokens[4].type == TokenType.SQUARE_CLOSE):
                 raise Exception(f"{base_error_message} decorations errror: squares on wrong register ")
@@ -282,9 +294,11 @@ class Assembler:
         elif tokens[0].value == Opcode.LDM.value and len(tokens) == 5:
             if (tokens[2].type == TokenType.SQUARE_OPEN and
                 tokens[4].type == TokenType.SQUARE_CLOSE):
-                instr.bytes.append(self.opcode_to_byte(tokens[0].value))
-                instr.bytes.append(self.register_to_byte(tokens[1].value))
-                instr.bytes.append(self.register_to_byte(tokens[3].value))
+                instr.bytes = [
+                        self.opcode_to_byte(tokens[0].value),
+                        self.register_to_byte(tokens[1].value),
+                        self.register_to_byte(tokens[3].value)
+                        ]
             elif (tokens[1].type == TokenType.SQUARE_OPEN and
                 tokens[3].type == TokenType.SQUARE_CLOSE):
                 raise Exception(f"{base_error_message} decorations errror: squares on wrong register ")
@@ -297,11 +311,13 @@ class Assembler:
         elif (tokens[0].value == Opcode.IMM.value and
               len(tokens) == 3 and
               tokens[2].type == TokenType.LABEL):
-            instr.bytes.append(self.opcode_to_byte(tokens[0].value))
-            instr.bytes.append(self.register_to_byte(tokens[1].value))
+            instr.bytes = [
+                    self.opcode_to_byte(tokens[0].value),
+                    self.register_to_byte(tokens[1].value),
+                    0
+                    ]
             # the instr byte at index 2 temporarily set to 0.
             # we associate that byte index to the unresolved label name
-            instr.bytes.append(0)
             instr.unresolved_labels[tokens[2].value] = 2
 
         # pseudo instruction
@@ -310,9 +326,11 @@ class Assembler:
         elif (tokens[0].value == Opcode.SYS.value and
               len(tokens) == 3 and
               tokens[1].type == TokenType.SYSNAME):
-            instr.bytes.append(self.opcode_to_byte(tokens[0].value))
-            instr.bytes.append(self.sysname_to_byte(tokens[1].value))
-            instr.bytes.append(self.register_to_byte(tokens[2].value))
+            instr.bytes = [
+                    self.opcode_to_byte(tokens[0].value),
+                    self.sysname_to_byte(tokens[1].value),
+                    self.register_to_byte(tokens[2].value)
+                    ]
 
         # handle the rest of the instructions here, using the
         # Instruction class in the machine for basic syntax checking
@@ -343,9 +361,9 @@ class Assembler:
         
 
         # if there are labels, add them to the instruction, then remove the list
-        instr.labels = awaiting_labels[::]
-        awaiting_labels = []
-        instr.tokens = tokens[::]
+        instr.labels = deepcopy(self.awaiting_labels)
+        self.awaiting_labels = []
+        instr.tokens = deepcopy(tokens)
         print("---")
         print("instruction:")
         print(instr.bytes, instr.labels, instr.unresolved_labels, instr.tokens)

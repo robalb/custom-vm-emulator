@@ -40,6 +40,7 @@ machine = Machine_test()
 input_string = "ADD R1, [R2], 0x1 :label sysname()"
 input_string = """
 #comment
+:labelaa
 :label
 ADD A B
 PUSH C
