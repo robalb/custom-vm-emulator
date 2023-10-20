@@ -153,6 +153,8 @@ class Assembler:
             else:
                 current_instruction_tokens.append(tokens[i])
 
+        print(instructions)
+
 
 
         return ""
