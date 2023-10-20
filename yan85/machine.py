@@ -179,7 +179,7 @@ class Machine:
         opcode = Opcode.LDM
         params = [Param.reg8, Param.reg8]
         description = """
-        LTM(reg1, reg2)
+        LDM(reg1, reg2)
             reg1 = [reg2]
 
         put into reg1 the byte pointed by reg2

@@ -1,4 +1,4 @@
-from .machine import Machine, Param, Opcode, Register, Instruction, InstructionByte
+from .machine import Machine, Param, Opcode, Register, Instruction, InstructionByte, Flag
 from enum import Enum
 from typing import List, Dict
 from .utils import *
@@ -67,15 +67,15 @@ J_L D
 
 
 class TokenType(Enum):
-    EOF = "EOF"
-    NEWLINE = "NEWLINE"
-    OPCODE = "OPCODE"
-    HEX = "HEX"
-    REGISTER = "REGISTER"
-    SQUARE_OPEN = "SQUARE_OPEN"
-    SQUARE_CLOSE = "SQUARE_CLOSE"
-    LABEL = "LABEL"
-    SYSNAME = "SYSNAME"
+    EOF          = "_EOF"
+    NEWLINE      = "_NEWLINE"
+    HEX          = "_HEX"
+    REGISTER     = "_REGISTER"
+    LABEL        = "_LABEL"
+    SYSNAME      = "_SYSNAME"
+    OPCODE       = "_OPCODE"
+    SQUARE_OPEN  = "["
+    SQUARE_CLOSE = "]"
 
 class Token:
     def __init__(self, type, value):
@@ -83,13 +83,12 @@ class Token:
         self.value = value
 
 class UnlinkedInstruction:
-    pseudo_instruction = True
-    tokens: List[Token]
-    bytes: List[int]
+    tokens: List[Token] = []
+    bytes: List[int] = []
     # the labels associated to this instruction
-    labels: List[str]
+    labels: List[str] = []
     # {":label_name": bytes_index}
-    unresolved_labels: Dict[str, int]
+    unresolved_labels: Dict[str, int] = {}
 
 
 def tokenize(input_string) -> List[Token]:
@@ -158,72 +157,196 @@ class Assembler:
 
         return ""
     
-    def parse_register(self, reg_str):
+    def register_to_byte(self, reg_str: str) -> int:
         for k in self.machine.conf_register_bytes:
             if self.machine.conf_register_bytes[k].value == reg_str:
                 return k
         raise Exception(f"Cannot convert to bytes register {reg_str}")
 
-    
-    def parse_hex(self, hex_str):
+    def opcode_to_byte(self, op_str: str) -> int:
+        for k in self.machine.conf_opcode_bytes:
+            if self.machine.conf_opcode_bytes[k].value == op_str:
+                return k
+        raise Exception(f"Cannot convert to bytes register {op_str}")
+
+    def hex_to_byte(self, hex_str):
         return int(hex_str, 16)
 
-    def parse_instruction(self, tokens, awaiting_labels):
+    def pseudo_JMP_to_byte(self, jmp_str):
+        prefix ="J_"
+        if not jmp_str.startswith(prefix):
+            raise Exception("invalid pseudo JMP")
+
+        flags = jmp_str[len(prefix):]
+        ret = 0
+        for f in flags:
+            found = False
+            for k in self.machine.conf_flag_bytes:
+                if self.machine.conf_flag_bytes[k].value == f:
+                    found = True
+                    ret |= k
+            if not found:
+                raise Exception(f"invalid pseudo JMP Flaf: {f}")
+        return ret
+
+    def sysname_to_byte(self, str):
+        if not str.endswith("()"):
+                raise Exception(f"Invalid sysname: {str}")
+        for k in self.machine.conf_syscall_bytes:
+            if self.machine.conf_syscall_bytes[k].value == str[:-2]:
+                return k
+        raise Exception(f"Cannot convert to bytes syscall {str}")
+
+
+    def parse_instruction(self, tokens: List[Token], awaiting_labels):
         """
-        SYS 0x2 D
-            # SYS pseudo instructions
-            SYS write() D
-
-        IMM   B 0x0
-            # IMM pseudo instructions
-            # :label addr. must be resolved, and divided by 3
-            IMM  A  :label
-
-        JMP   0x2 D
-            # JMP pseudo instructions
-            # syntax: J_(Z)(E|N)(G|L)
-            J_NLZ D
-            J_GZ  D
-
-        STK   A B
-            # STK pseudo instructions
-            NOP
-            PUSH  A
-            POP   A
-
-        LDM   B [B]  <- brackets are optional
-                        acts as visual help.
-                        you cannot put them in the wrog order, syntax error
-                        LDM [B] B , LDM [B] [B]  << error
-        STM   [A] A
-
+        todo: doc
         """
+
         #prepare a readable representation of the current unparsed instruction
         readable = ""
         for t in tokens:
             readable += f"{t.type.value} {t.value}\n"
+        base_error_message = f"Could not assemble: \n{readable}\n"
 
         # debug print
         print("="*10)
         print(readable)
-
+        
+        #prepare the instruction entity
+        instr = UnlinkedInstruction()
+        
         #handle label
         if len(tokens) == 1 and tokens[0].type == TokenType.LABEL:
             # add it to the waiting list. it will be attached to the next
             # valid instruction
             awaiting_labels.append(tokens[0].value)
-        
-        #handle pseudo instructions
-        # STK
-        # if tokens[0].value == "PUSH":
-        #     if 
+            return
 
-        # else: 
-        #     raise Exception(f"Could not assemble: \n{readable}")
+        # pseudo instruction
+        # PUSH Reg = STK N Reg
+        if tokens[0].value == "PUSH":
+            if len(tokens) != 2:
+                raise Exception(f"{base_error_message} invalid arguments count")
+            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
+            instr.bytes.append(self.register_to_byte(Register.N.value))
+            instr.bytes.append(self.register_to_byte(tokens[1].value))
+
+        # pseudo instruction
+        # POP Reg = STK Reg N
+        elif tokens[0].value == "POP":
+            if len(tokens) != 2:
+                raise Exception(f"{base_error_message} invalid arguments count")
+            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
+            instr.bytes.append(self.register_to_byte(tokens[1].value))
+            instr.bytes.append(self.register_to_byte(Register.N.value))
+
+        # pseudo instruction
+        # NOP = STK N N
+        elif tokens[0].value == "NOP":
+            if len(tokens) != 1:
+                raise Exception(f"{base_error_message} invalid arguments count")
+            instr.bytes.append(self.opcode_to_byte(Opcode.STK.value))
+            instr.bytes.append(self.register_to_byte(Register.N.value))
+            instr.bytes.append(self.register_to_byte(Register.N.value))
+
+        # pseudo instruction
+        # J_{flags} Reg = JMP {flags} Reg
+        elif tokens[0].value.startswith("J_"):
+            if len(tokens) != 2:
+                raise Exception(f"{base_error_message} invalid arguments count")
+            instr.bytes.append(self.opcode_to_byte(Opcode.JMP.value))
+            instr.bytes.append(self.pseudo_JMP_to_byte(tokens[0].value))
+            instr.bytes.append(self.register_to_byte(tokens[1].value))
+
+        # pseudo instruction
+        # decorated STM with square brackets
+        # STM [A] B
+        elif tokens[0].value == Opcode.STM.value and len(tokens) == 5:
+            if (tokens[1].type == TokenType.SQUARE_OPEN and
+                tokens[3].type == TokenType.SQUARE_CLOSE):
+                instr.bytes.append(self.opcode_to_byte(tokens[0].value))
+                instr.bytes.append(self.register_to_byte(tokens[2].value))
+                instr.bytes.append(self.register_to_byte(tokens[4].value))
+            elif (tokens[2].type == TokenType.SQUARE_OPEN and
+                tokens[4].type == TokenType.SQUARE_CLOSE):
+                raise Exception(f"{base_error_message} decorations errror: squares on wrong register ")
+            else:
+                raise Exception(f"{base_error_message} invalid arguments count")
+
+        # pseudo instruction
+        # decorated LDM with square brackets
+        # STM A [B]
+        elif tokens[0].value == Opcode.LDM.value and len(tokens) == 5:
+            if (tokens[2].type == TokenType.SQUARE_OPEN and
+                tokens[4].type == TokenType.SQUARE_CLOSE):
+                instr.bytes.append(self.opcode_to_byte(tokens[0].value))
+                instr.bytes.append(self.register_to_byte(tokens[1].value))
+                instr.bytes.append(self.register_to_byte(tokens[3].value))
+            elif (tokens[1].type == TokenType.SQUARE_OPEN and
+                tokens[3].type == TokenType.SQUARE_CLOSE):
+                raise Exception(f"{base_error_message} decorations errror: squares on wrong register ")
+            else:
+                raise Exception(f"{base_error_message} LDM invalid arguments count")
+
+        # pseudo instruction
+        # imm with string label
+        # IMM A :label
+        elif (tokens[0].value == Opcode.IMM.value and
+              len(tokens) == 3 and
+              tokens[2].type == TokenType.LABEL):
+            instr.bytes.append(self.opcode_to_byte(tokens[0].value))
+            instr.bytes.append(self.register_to_byte(tokens[1].value))
+            # the instr byte at index 2 temporarily set to 0.
+            # we associate that byte index to the unresolved label name
+            instr.bytes.append(0)
+            instr.unresolved_labels[tokens[2].value] = 2
+
+        # pseudo instruction
+        # sys with readable function name
+        # SYS read() D
+        elif (tokens[0].value == Opcode.SYS.value and
+              len(tokens) == 3 and
+              tokens[1].type == TokenType.SYSNAME):
+            instr.bytes.append(self.opcode_to_byte(tokens[0].value))
+            instr.bytes.append(self.sysname_to_byte(tokens[1].value))
+            instr.bytes.append(self.register_to_byte(tokens[2].value))
+
+        # handle the rest of the instructions here, using the
+        # Instruction class in the machine for basic syntax checking
+        else:
+            #get the opcode Instruction info class
+            instr_definition = None
+            for k in self.machine.instructions:
+                if k.value == tokens[0].value:
+                    instr_definition = self.machine.instructions[k]
+            if instr_definition is None:
+                raise Exception(f"{base_error_message} cannot find instruction definition")
+            
+            # get the opcode byte
+            instr.bytes.append(self.opcode_to_byte(tokens[0].value))
+
+            # validate arguments count
+            if len(tokens)-1 != len(instr_definition.params):
+                raise Exception(f"{base_error_message} expected {len(instr_definition.params)} parameters, got {len(tokens)-1}")
+
+            #get the rest of the parameters
+            i = 0
+            for param in instr_definition.params:
+                i += 1
+                if param == Param.imm8:
+                    instr.bytes.append(self.hex_to_byte(tokens[i].value))
+                if param == Param.reg8:
+                    instr.bytes.append(self.register_to_byte(tokens[i].value))
         
 
-        instr = Instruction()
+        # if there are labels, add them to the instruction, then remove the list
         instr.labels = awaiting_labels[::]
+        awaiting_labels = []
+        instr.tokens = tokens[::]
+        print("---")
+        print("instruction:")
+        print(instr.bytes, instr.labels, instr.unresolved_labels, instr.tokens)
         return instr
 
 

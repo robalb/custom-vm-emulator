@@ -43,10 +43,10 @@ input_string = """
 :label
 ADD A B
 PUSH C
-SYS read() C
+SYS write() C
 LDM A [i]
-IMM a :label
-IMM a :label # some text
+IMM A :label
+IMM A :label # some text
 """
 
 assembler = Assembler(machine)
