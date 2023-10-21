@@ -91,6 +91,9 @@ class UnlinkedInstruction:
     # {":label_name": bytes_index}
     unresolved_labels: Dict[str, int] = {}
 
+    def __init__(self):
+        pass
+
 
 def tokenize(input_string) -> List[Token]:
     tokens = []
@@ -123,83 +126,87 @@ def tokenize(input_string) -> List[Token]:
     return tokens
 
 class Assembler:
-    #a machine that will be used to infer all the 
+    # a machine that will be used to infer all the 
     # informations required for the byte assembly,
-    #such as the register name order. It changes from machine to machine
+    # such as the register name order. It changes from machine to machine
     machine: Machine
+
+    # Temporary list of labels, used during the
+    # tokens to unlinked step
+    # TODO: remove
+    awaiting_labels = []
+
+    code_str = ""
+    tokens: List[Token] = []
+    unlinked_instructions: List[UnlinkedInstruction] = []
+    bytes: List[int] = []
+
 
     def __init__(self, machine: Machine):
         self.machine = machine
 
-    def assemble(self, code: str):
+
+    def reset_state(self):
+        self.code_str = ""
+        self.tokens = []
+        self.unlinked_instructions = []
+        self.bytes = []
+
+
+    def assemble(self, code_str: str):
+        self.reset_state()
+        self.code_str = code_str
+        self.code_str_to_tokens()
+        self.tokens_to_unlinked()
+        self.unlinked_to_bytes()
+        return self.bytes
+
+
+    def code_str_to_tokens(self):
+        """
+        transform the input string into a list of tokens
+        """
         # transform the input string into a list of tokens
-        tokens = tokenize(code)
+        self.tokens = tokenize(self.code_str)
         # debug print the tokens
-        for t in tokens:
+        print("[debug] tokenization result:")
+        for t in self.tokens:
             value = t.value
             if t.type == TokenType.NEWLINE:
                 value = ""
             print(t.type.value, value)
 
+
+    def tokens_to_unlinked(self):
+        """
+        transform the list of tokens into 
+        a list of instructions objects, some will have missing bytes
+        that require linking to be resolved
+        """
         # parse all the tokens between a newline into an instruction
-        instructions = []
+        #TODO: move all label logic here
         self.awaiting_labels = []
         current_instruction_tokens = []
-        for i in range(len(tokens)):
-            if tokens[i].type in (TokenType.NEWLINE, TokenType.EOF):
+        for i in range(len(self.tokens)):
+            if self.tokens[i].type in (TokenType.NEWLINE, TokenType.EOF):
                 if len(current_instruction_tokens) > 0:
                     res = self.parse_instruction(current_instruction_tokens)
                     current_instruction_tokens = []
                     if res  is not None:
-                        instructions.append(res)
+                        self.unlinked_instructions.append(res)
             else:
-                current_instruction_tokens.append(tokens[i])
+                current_instruction_tokens.append(self.tokens[i])
 
-        print(instructions)
+        print("[debug] unlinked instruction generation result:")
+        for i in self.unlinked_instructions:
+            print("-"*20)
+            print(f"bytes: ", i.bytes, " labels: ", i.labels, "tokens: ")
+            for t in i.tokens:
+                print(t.value)
 
 
-
-        return ""
-    
-    def register_to_byte(self, reg_str: str) -> int:
-        for k in self.machine.conf_register_bytes:
-            if self.machine.conf_register_bytes[k].value == reg_str:
-                return k
-        raise Exception(f"Cannot convert to bytes register {reg_str}")
-
-    def opcode_to_byte(self, op_str: str) -> int:
-        for k in self.machine.conf_opcode_bytes:
-            if self.machine.conf_opcode_bytes[k].value == op_str:
-                return k
-        raise Exception(f"Cannot convert to bytes register {op_str}")
-
-    def hex_to_byte(self, hex_str):
-        return int(hex_str, 16)
-
-    def pseudo_JMP_to_byte(self, jmp_str):
-        prefix ="J_"
-        if not jmp_str.startswith(prefix):
-            raise Exception("invalid pseudo JMP")
-
-        flags = jmp_str[len(prefix):]
-        ret = 0
-        for f in flags:
-            found = False
-            for k in self.machine.conf_flag_bytes:
-                if self.machine.conf_flag_bytes[k].value == f:
-                    found = True
-                    ret |= k
-            if not found:
-                raise Exception(f"invalid pseudo JMP Flaf: {f}")
-        return ret
-
-    def sysname_to_byte(self, str):
-        if not str.endswith("()"):
-                raise Exception(f"Invalid sysname: {str}")
-        for k in self.machine.conf_syscall_bytes:
-            if self.machine.conf_syscall_bytes[k].value == str[:-2]:
-                return k
-        raise Exception(f"Cannot convert to bytes syscall {str}")
+    def unlinked_to_bytes(self):
+        pass
 
 
     def parse_instruction(self, tokens: List[Token]):
@@ -368,5 +375,46 @@ class Assembler:
         print("instruction:")
         print(instr.bytes, instr.labels, instr.unresolved_labels, instr.tokens)
         return instr
+
+
+    def register_to_byte(self, reg_str: str) -> int:
+        for k in self.machine.conf_register_bytes:
+            if self.machine.conf_register_bytes[k].value == reg_str:
+                return k
+        raise Exception(f"Cannot convert to bytes register {reg_str}")
+
+    def opcode_to_byte(self, op_str: str) -> int:
+        for k in self.machine.conf_opcode_bytes:
+            if self.machine.conf_opcode_bytes[k].value == op_str:
+                return k
+        raise Exception(f"Cannot convert to bytes register {op_str}")
+
+    def hex_to_byte(self, hex_str):
+        return int(hex_str, 16)
+
+    def pseudo_JMP_to_byte(self, jmp_str):
+        prefix ="J_"
+        if not jmp_str.startswith(prefix):
+            raise Exception("invalid pseudo JMP")
+
+        flags = jmp_str[len(prefix):]
+        ret = 0
+        for f in flags:
+            found = False
+            for k in self.machine.conf_flag_bytes:
+                if self.machine.conf_flag_bytes[k].value == f:
+                    found = True
+                    ret |= k
+            if not found:
+                raise Exception(f"invalid pseudo JMP Flaf: {f}")
+        return ret
+
+    def sysname_to_byte(self, str):
+        if not str.endswith("()"):
+                raise Exception(f"Invalid sysname: {str}")
+        for k in self.machine.conf_syscall_bytes:
+            if self.machine.conf_syscall_bytes[k].value == str[:-2]:
+                return k
+        raise Exception(f"Cannot convert to bytes syscall {str}")
 
 
