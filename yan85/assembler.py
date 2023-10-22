@@ -172,9 +172,8 @@ class Assembler:
 
     def tokens_to_unlinked(self):
         """
-        transform the list of tokens into 
-        a list of instructions objects, some will have missing bytes
-        that require linking to be resolved
+        transform the list of tokens into a list of instructions objects.
+        Some will have missing bytes that require linking to be resolved
         """
         # parse all the tokens between a newline into an instruction
         current_instruction_tokens = []
@@ -196,6 +195,7 @@ class Assembler:
                         raise Exception(f"Could not assemble:\n {readable_tokens}\n error: {str(e)}")
                     self.unlinked_instructions.append(res)
                     current_label = ""
+                #reset instructions list
                 current_instruction_tokens = []
             else:
                 current_instruction_tokens.append(self.tokens[i])
