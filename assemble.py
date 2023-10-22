@@ -46,7 +46,7 @@ PUSH C
 SYS write() C
 LDM A [i]
 IMM A :label
-IMM A :labelaa # some text
+J_Z A
 """
 
 #TODOLIST:

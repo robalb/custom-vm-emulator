@@ -208,12 +208,29 @@ class Assembler:
                 print(t.value)
 
     def link_instructions(self):
-        #TODO: iterate, instructions, fetch labels
-        #TODO: iterate instructions, resolve unlinked instructions
-        pass
+        #extract a dict of known labels
+        labels = {}
+        for i in range(len(self.unlinked_instructions)):
+            instr = self.unlinked_instructions[i]
+            if len(instr.labels) > 0:
+                for l in instr.labels:
+                    labels[l] = i
+        
+        #replace missing bytes in instructions that require labels
+        for instr in self.unlinked_instructions:
+            for label, byte_addr in instr.unresolved_labels.items():
+                if label not in labels:
+                    raise Exception(f"Linking error: {label} is unknown")
+                label_addr = labels[label]
+                label_addr = (label_addr * 3) % 256
+                instr.bytes[byte_addr] = label_addr
 
     def linked_to_bytes(self):
-        pass
+        for i in self.unlinked_instructions:
+            self.bytes.extend(i.bytes)
+        print("[debug] bytes: ")
+        print(self.bytes)
+
 
 
     def parse_instruction(self, tokens: List[Token], current_label: str) -> UnlinkedInstruction:
