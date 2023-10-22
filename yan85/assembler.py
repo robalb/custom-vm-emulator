@@ -70,11 +70,9 @@ J_L D
 class TokenType(Enum):
     EOF          = "_EOF"
     NEWLINE      = "_NEWLINE"
-    HEX          = "_HEX"
-    REGISTER     = "_REGISTER"
-    LABEL        = "_LABEL"
     SYSNAME      = "_SYSNAME"
-    OPCODE       = "_OPCODE"
+    LABEL        = "_LABEL"
+    TEXT         = "_TEXT"
     SQUARE_OPEN  = "["
     SQUARE_CLOSE = "]"
 
@@ -102,12 +100,10 @@ def tokenize(input_string) -> List[Token]:
     patterns = [
         (TokenType.NEWLINE, r'(?:\n|#.*\n)+'),
         (TokenType.SYSNAME, r'[a-z][a-z_]+\(\)'),
-        (TokenType.OPCODE, r'[A-Z][A-Z_]{2,10}'),
-        (TokenType.HEX, r'0x[0-9A-Fa-f]{1,2}'),
-        (TokenType.REGISTER, r'[A-DNsif]{1}'),
         (TokenType.SQUARE_OPEN, r'\['),
         (TokenType.SQUARE_CLOSE, r'\]'),
         (TokenType.LABEL, r':[A-Za-z0-9]*'),
+        (TokenType.TEXT, r'[A-Za-z0-9_]*'),
     ]
 
     combined_pattern = '|'.join(f'(?P<{type.name}>{pattern})' for type, pattern in patterns)
@@ -131,14 +127,10 @@ class Assembler:
     # such as the register name order. It changes from machine to machine
     machine: Machine
 
-    # Temporary list of labels, used during the
-    # tokens to unlinked step
-    # TODO: remove
-    awaiting_labels = []
-
     code_str = ""
     tokens: List[Token] = []
     unlinked_instructions: List[UnlinkedInstruction] = []
+    linked_instructions: List[UnlinkedInstruction] = []
     bytes: List[int] = []
 
 
@@ -158,7 +150,8 @@ class Assembler:
         self.code_str = code_str
         self.code_str_to_tokens()
         self.tokens_to_unlinked()
-        self.unlinked_to_bytes()
+        self.link_instructions()
+        self.linked_to_bytes()
         return self.bytes
 
 
@@ -184,16 +177,26 @@ class Assembler:
         that require linking to be resolved
         """
         # parse all the tokens between a newline into an instruction
-        #TODO: move all label logic here
-        self.awaiting_labels = []
         current_instruction_tokens = []
+        current_label = ""
         for i in range(len(self.tokens)):
             if self.tokens[i].type in (TokenType.NEWLINE, TokenType.EOF):
-                if len(current_instruction_tokens) > 0:
-                    res = self.parse_instruction(current_instruction_tokens)
-                    current_instruction_tokens = []
-                    if res  is not None:
-                        self.unlinked_instructions.append(res)
+                #flush label
+                if (len(current_instruction_tokens) == 1 and
+                    current_instruction_tokens[0].type == TokenType.LABEL):
+                    current_label = current_instruction_tokens[0].value
+                #flush instruction
+                elif len(current_instruction_tokens) > 0:
+                    try:
+                        res = self.parse_instruction(current_instruction_tokens, current_label)
+                    except Exception as e:
+                        readable_tokens = ""
+                        for t in current_instruction_tokens:
+                            readable_tokens += f"{t.type.value} {t.value}\n"
+                        raise Exception(f"Could not assemble:\n {readable_tokens}\n error: {str(e)}")
+                    self.unlinked_instructions.append(res)
+                    current_label = ""
+                current_instruction_tokens = []
             else:
                 current_instruction_tokens.append(self.tokens[i])
 
@@ -204,36 +207,25 @@ class Assembler:
             for t in i.tokens:
                 print(t.value)
 
+    def link_instructions(self):
+        #TODO: iterate, instructions, fetch labels
+        #TODO: iterate instructions, resolve unlinked instructions
+        pass
 
-    def unlinked_to_bytes(self):
+    def linked_to_bytes(self):
         pass
 
 
-    def parse_instruction(self, tokens: List[Token]):
-        """
-        todo: doc
-        """
+    def parse_instruction(self, tokens: List[Token], current_label: str) -> UnlinkedInstruction:
 
-        #prepare a readable representation of the current unparsed instruction
-        readable = ""
-        for t in tokens:
-            readable += f"{t.type.value} {t.value}\n"
-        base_error_message = f"Could not assemble: \n{readable}\n"
-
-        # debug print
-        print("="*10)
-        print(readable)
+        base_error_message = f"instruction parse error: "
         
         #prepare the instruction entity
         instr = UnlinkedInstruction()
+        instr.tokens = deepcopy(tokens)
+        if current_label:
+            instr.labels = [current_label]
         
-        #handle label
-        if len(tokens) == 1 and tokens[0].type == TokenType.LABEL:
-            # add it to the waiting list. it will be attached to the next
-            # valid instruction
-            self.awaiting_labels.append(tokens[0].value)
-            return
-
         # pseudo instruction
         # PUSH Reg = STK N Reg
         if tokens[0].value == "PUSH":
@@ -366,11 +358,6 @@ class Assembler:
                 if param == Param.reg8:
                     instr.bytes.append(self.register_to_byte(tokens[i].value))
         
-
-        # if there are labels, add them to the instruction, then remove the list
-        instr.labels = deepcopy(self.awaiting_labels)
-        self.awaiting_labels = []
-        instr.tokens = deepcopy(tokens)
         print("---")
         print("instruction:")
         print(instr.bytes, instr.labels, instr.unresolved_labels, instr.tokens)
