@@ -16,6 +16,8 @@ IMM   B 0x0
     #  associated to that label + code_base_addr
     # examples:
     IMM  A  :label
+    IMM  A 'h'
+    IMM  A '/'
 
 JMP   0x2 D
     # JMP pseudo instructions
@@ -54,6 +56,7 @@ class TokenType(Enum):
     SYSNAME      = "_SYSNAME"
     LABEL        = "_LABEL"
     TEXT         = "_TEXT"
+    CHAR         = "_CHAR"
     SQUARE_OPEN  = "["
     SQUARE_CLOSE = "]"
 
@@ -89,6 +92,7 @@ def tokenize(input_string) -> List[Token]:
         (TokenType.SQUARE_CLOSE, r'\]'),
         (TokenType.LABEL, r':[A-Za-z0-9_]*'),
         (TokenType.TEXT, r'[A-Za-z0-9_]*'),
+        (TokenType.CHAR, r'\'.\''),
     ]
 
     combined_pattern = '|'.join(f'(?P<{type.name}>{pattern})' for type, pattern in patterns)
@@ -331,6 +335,19 @@ class Assembler:
             # the instr byte at index 2 temporarily set to 0.
             # we associate that byte index to the unresolved label name
             instr.unresolved_labels[tokens[2].value] = 2
+
+        # pseudo instruction
+        # imm with char
+        # IMM A 'c'
+        elif (tokens[0].value == Opcode.IMM.value and
+              len(tokens) == 3 and
+              tokens[2].type == TokenType.CHAR):
+            chr = tokens[2].value[1]
+            instr.bytes = [
+                    self.opcode_to_byte(tokens[0].value),
+                    self.register_to_byte(tokens[1].value),
+                    ord(chr)
+                    ]
 
         # pseudo instruction
         # sys with readable function name
