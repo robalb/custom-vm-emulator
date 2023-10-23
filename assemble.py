@@ -39,15 +39,14 @@ class Machine_test(Machine):
 machine = Machine_test()
 input_string = """
 #comment
-:label
     ADD A B
     PUSH C
+:label
     SYS write() C
     LDM A [i]
     IMM A :label
-    J_ZA A
 """
 
-assembler = Assembler(machine)
+assembler = Assembler(machine, machine.conf_code_base_address)
 ret = assembler.assemble(input_string)
 

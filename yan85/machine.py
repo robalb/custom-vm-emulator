@@ -254,7 +254,7 @@ class Machine:
         self.vmem = [0] * self.conf_vmem_bytes
 
 
-    def load_code(self, code_dump: str):
+    def load_code_dump(self, code_dump: str):
         """
         load yan code into memory, from a hexdump string.
         The code is loaded at offset conf.code_base_address
@@ -263,7 +263,18 @@ class Machine:
         """
         code_bytes = []
         dump_to_code_bytes(code_dump, code_bytes)
+        self.load_code_bytes(code_bytes)
+
+    def load_code_bytes(self, code_bytes: List[int]):
+        """
+        load yan code into memory, from a hexdump string.
+        The code is loaded at offset conf.code_base_address
+        The code must be a list if integers. an integer cannot
+        be larger than 255
+        """
         virtual_mmap(self.vmem, code_bytes, self.conf_code_base_address)
+
+
 
 
     def run_loop(self):

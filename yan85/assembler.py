@@ -1,14 +1,9 @@
-from .machine import Machine, Param, Opcode, Register, Instruction, InstructionByte, Flag
-from enum import Enum
-from typing import List, Dict
-from .utils import *
-import re
-from copy import deepcopy
+"""
+yan85 assembler
 
+assembly syntax:
 
-language_specs = """
 ADD   A B
-
 CMP   i D
 
 SYS 0x2 D
@@ -17,54 +12,40 @@ SYS 0x2 D
 
 IMM   B 0x0
     # IMM pseudo instructions
-    # :label addr. must be resolved, and divided by 3
+    # :label will be resolved with the index of the instruction 
+    #  associated to that label + code_base_addr
+    # examples:
     IMM  A  :label
 
 JMP   0x2 D
     # JMP pseudo instructions
     # syntax: J_(Z)(E|N)(G|L)
+    # examples:
     J_NLZ D
     J_GZ  D
+    J_Z   D
 
 STK   A B
     # STK pseudo instructions
-    NOP
-    PUSH  A
-    POP   A
+    NOP       # compiles into STK N N
+    PUSH  A   # compiles into STK A N
+    POP   A   # compiles int  STK N A
 
 LDM   B [B]  <- brackets are optional
                 acts as visual help.
                 you cannot put them in the wrog order, syntax error
-                LDM [B] B , LDM [B] [B]  << error
+                LDM [B] B    # syntax error: brackets in wrong order
+                LDM [B] [B]  # syntax error
 STM   [A] A
 """
 
-example = """
-IMM A 0
-IMM i :loop
-:loop_body
 
-PUSH A
-PUSH B
-PUSH C
-IMM A 0x0
-IMM B 0x30
-ADD B 
-IMM C 0x2
-SYS read() D
-POP C
-POP B
-POP A
-
-IMM B 0x1
-ADD A B
-:loop
-IMM C 0x5
-CMP A C
-IMM D :loop_body
-J_L D
-
-"""
+from .machine import Machine, Param, Opcode, Register, Instruction, InstructionByte, Flag
+from enum import Enum
+from typing import List, Dict
+from .utils import *
+import re
+from copy import deepcopy
 
 
 class TokenType(Enum):
@@ -121,6 +102,7 @@ def tokenize(input_string) -> List[Token]:
     tokens.append(Token(TokenType.EOF, ""))
     return tokens
 
+
 class Assembler:
     # a machine that will be used to infer all the 
     # informations required for the byte assembly,
@@ -129,13 +111,20 @@ class Assembler:
 
     code_str = ""
     tokens: List[Token] = []
+    #TODO: rename in abstract_instruction
+    # they have unlinked references, and unswapped bytes
     unlinked_instructions: List[UnlinkedInstruction] = []
+    #TODO: remove completely, just have a bytes list as output
     linked_instructions: List[UnlinkedInstruction] = []
     bytes: List[int] = []
 
+    code_base_addr = 0
+    debug = True
 
-    def __init__(self, machine: Machine):
+
+    def __init__(self, machine: Machine, code_base_addr: int):
         self.machine = machine
+        self.code_base_addr = code_base_addr
 
 
     def reset_state(self):
@@ -162,12 +151,13 @@ class Assembler:
         # transform the input string into a list of tokens
         self.tokens = tokenize(self.code_str)
         # debug print the tokens
-        print("[debug] tokenization result:")
-        for t in self.tokens:
-            value = t.value
-            if t.type == TokenType.NEWLINE:
-                value = ""
-            print(t.type.value, value)
+        if self.debug:
+            print("[debug] tokenization result:")
+            for t in self.tokens:
+                value = t.value
+                if t.type == TokenType.NEWLINE:
+                    value = ""
+                print(t.type.value, value)
 
 
     def tokens_to_unlinked(self):
@@ -200,36 +190,52 @@ class Assembler:
             else:
                 current_instruction_tokens.append(self.tokens[i])
 
-        print("[debug] unlinked instruction generation result:")
-        for i in self.unlinked_instructions:
-            print("-"*20)
-            print(f"bytes: ", i.bytes, " labels: ", i.labels, "tokens: ")
-            for t in i.tokens:
-                print(t.value)
+        if self.debug:
+            print("[debug] unlinked instruction generation result:")
+            for i in self.unlinked_instructions:
+                print("-"*20)
+                print(f"bytes: ", i.bytes, " labels: ", i.labels, "tokens: ")
+                for t in i.tokens:
+                    print(t.value)
 
     def link_instructions(self):
+        #clone unlinked into linked
+        self.linked_instructions = deepcopy(self.unlinked_instructions)
+
         #extract a dict of known labels
         labels = {}
-        for i in range(len(self.unlinked_instructions)):
-            instr = self.unlinked_instructions[i]
+        for i in range(len(self.linked_instructions)):
+            instr = self.linked_instructions[i]
             if len(instr.labels) > 0:
                 for l in instr.labels:
                     labels[l] = i
         
         #replace missing bytes in instructions that require labels
-        for instr in self.unlinked_instructions:
+        for instr in self.linked_instructions:
             for label, byte_addr in instr.unresolved_labels.items():
                 if label not in labels:
                     raise Exception(f"Linking error: {label} is unknown")
                 label_addr = labels[label]
-                label_addr = (label_addr * 3) % 256
+                label_addr = (label_addr + self.code_base_addr) % 256
                 instr.bytes[byte_addr] = label_addr
 
+        # swap bytes order for every instruction
+        for instr in self.linked_instructions:
+            new_bytes = [0] * 3
+            order = self.machine.conf_instruction_bytes_order
+            i = 0
+            for k, v in order.items():
+                new_bytes[v] = instr.bytes[i]
+                i += 1
+            instr.bytes = new_bytes
+
+
     def linked_to_bytes(self):
-        for i in self.unlinked_instructions:
+        for i in self.linked_instructions:
             self.bytes.extend(i.bytes)
-        print("[debug] bytes: ")
-        print(self.bytes)
+        if self.debug:
+            print("[debug] bytes: ")
+            print(self.bytes)
 
 
 
@@ -374,10 +380,6 @@ class Assembler:
                     instr.bytes.append(self.hex_to_byte(tokens[i].value))
                 if param == Param.reg8:
                     instr.bytes.append(self.register_to_byte(tokens[i].value))
-        
-        print("---")
-        print("instruction:")
-        print(instr.bytes, instr.labels, instr.unresolved_labels, instr.tokens)
         return instr
 
 
