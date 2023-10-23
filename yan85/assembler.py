@@ -63,15 +63,19 @@ class Token:
         self.value = value
 
 class UnlinkedInstruction:
-    tokens: List[Token] = []
-    bytes: List[int] = []
+    tokens: List[Token]
+    #instruction bytes in unswapped order,
+    #bytes set to 0xff are unresolved
+    bytes: List[int]
     # the labels associated to this instruction
-    labels: List[str] = []
+    labels: List[str]
     # {":label_name": bytes_index}
-    unresolved_labels: Dict[str, int] = {}
-
+    unresolved_labels: Dict[str, int]
     def __init__(self):
-        pass
+        self.tokens = []
+        self.bytes = []
+        self.labels = []
+        self.unresolved_labels = {}
 
 
 def tokenize(input_string) -> List[Token]:
@@ -221,7 +225,7 @@ class Assembler:
 
         # swap bytes order for every instruction
         for instr in self.linked_instructions:
-            new_bytes = [0] * 3
+            new_bytes = [0xff] * 3
             order = self.machine.conf_instruction_bytes_order
             i = 0
             for k, v in order.items():
@@ -336,7 +340,7 @@ class Assembler:
             instr.bytes = [
                     self.opcode_to_byte(tokens[0].value),
                     self.register_to_byte(tokens[1].value),
-                    0
+                    0xff
                     ]
             # the instr byte at index 2 temporarily set to 0.
             # we associate that byte index to the unresolved label name

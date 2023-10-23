@@ -1,12 +1,22 @@
 from yan85.machine import Machine, Opcode, Register, TrapType
 from yan85.disassembler import Disassembler
+from yan85.assembler import Assembler
 from yan85.utils import *
 from yan85.debugger.core import Debugger
 
-code_dump = """
-10 00 00 10 00 00 10 00 00 10 00 00 10 00 00 10 00 00
+shellcode = """
+:start
+IMM i :label
+IMM A 0x01
+PUSH A
+IMM A 0x02
+PUSH A
+:label
+NOP
+NOP
+NOP
+IMM i :start
 """
-
 
 # define a yan85 machine with custom variations
 class Machine_test(Machine):
@@ -36,7 +46,10 @@ class Machine_test(Machine):
         }
 
 machine = Machine_test()
-machine.load_code(code_dump)
+
+assembler = Assembler(machine, 0)
+shellcode_bytes = assembler.assemble(shellcode)
+machine.load_code_bytes(shellcode_bytes)
 
 
 breaks = [
