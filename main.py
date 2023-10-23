@@ -6,16 +6,26 @@ from yan85.debugger.core import Debugger
 
 shellcode = """
 :start
-IMM i :label
-IMM A 0x01
-PUSH A
-IMM A 0x02
-PUSH A
-:label
-NOP
-NOP
-NOP
-IMM i :start
+    IMM B 0x0
+:loop_body
+    IMM C 0x30
+    ADD C D
+    ADD C B
+    STM [C] B
+    IMM A 0x1
+    ADD B A
+:loop
+    IMM C 0x8
+    CMP C B
+    IMM A :loop_body
+    J_NG A
+    
+    NOP
+    NOP
+
+    IMM A 0x8
+    ADD D A
+    IMM i :start
 """
 
 # define a yan85 machine with custom variations

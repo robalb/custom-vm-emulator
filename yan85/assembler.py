@@ -87,7 +87,7 @@ def tokenize(input_string) -> List[Token]:
         (TokenType.SYSNAME, r'[a-z][a-z_]+\(\)'),
         (TokenType.SQUARE_OPEN, r'\['),
         (TokenType.SQUARE_CLOSE, r'\]'),
-        (TokenType.LABEL, r':[A-Za-z0-9]*'),
+        (TokenType.LABEL, r':[A-Za-z0-9_]*'),
         (TokenType.TEXT, r'[A-Za-z0-9_]*'),
     ]
 
