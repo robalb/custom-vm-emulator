@@ -115,11 +115,8 @@ class Assembler:
 
     code_str = ""
     tokens: List[Token] = []
-    #TODO: rename in abstract_instruction
-    # they have unlinked references, and unswapped bytes
+    # Instructions with unlinked references, and unswapped bytes
     unlinked_instructions: List[UnlinkedInstruction] = []
-    #TODO: remove completely, just have a bytes list as output
-    linked_instructions: List[UnlinkedInstruction] = []
     bytes: List[int] = []
 
     code_base_addr = 0
@@ -143,8 +140,7 @@ class Assembler:
         self.code_str = code_str
         self.code_str_to_tokens()
         self.tokens_to_unlinked()
-        self.link_instructions()
-        self.linked_to_bytes()
+        self.unlinked_to_bytes()
         return self.bytes
 
 
@@ -202,45 +198,35 @@ class Assembler:
                 for t in i.tokens:
                     print(t.value)
 
-    def link_instructions(self):
-        #clone unlinked into linked
-        self.linked_instructions = deepcopy(self.unlinked_instructions)
-
+    def unlinked_to_bytes(self):
         #extract a dict of known labels
         labels = {}
-        for i in range(len(self.linked_instructions)):
-            instr = self.linked_instructions[i]
+        for i in range(len(self.unlinked_instructions)):
+            instr = self.unlinked_instructions[i]
             if len(instr.labels) > 0:
                 for l in instr.labels:
                     labels[l] = i
         
-        #replace missing bytes in instructions that require labels
-        for instr in self.linked_instructions:
+        for instr in self.unlinked_instructions:
+            real_bytes = deepcopy(instr.bytes)
+            #replace missing bytes if the instruction has unlinked labels
             for label, byte_addr in instr.unresolved_labels.items():
                 if label not in labels:
                     raise Exception(f"Linking error: {label} is unknown")
                 label_addr = labels[label]
                 label_addr = (label_addr + self.code_base_addr) % 256
-                instr.bytes[byte_addr] = label_addr
-
-        # swap bytes order for every instruction
-        for instr in self.linked_instructions:
-            new_bytes = [0xff] * 3
-            order = self.machine.conf_instruction_bytes_order
+                real_bytes[byte_addr] = label_addr
+            #swap bytes order, according to the machine swap order
             i = 0
-            for k, v in order.items():
-                new_bytes[v] = instr.bytes[i]
+            swapped_real_bytes = deepcopy(real_bytes)
+            for k, v in self.machine.conf_instruction_bytes_order.items():
+                swapped_real_bytes[v] = real_bytes[i]
                 i += 1
-            instr.bytes = new_bytes
+            self.bytes.extend(swapped_real_bytes)
 
-
-    def linked_to_bytes(self):
-        for i in self.linked_instructions:
-            self.bytes.extend(i.bytes)
         if self.debug:
-            print("[debug] bytes: ")
+            print("[debug] result bytes: ")
             print(self.bytes)
-
 
 
     def parse_instruction(self, tokens: List[Token], current_label: str) -> UnlinkedInstruction:
