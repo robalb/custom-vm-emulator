@@ -37,27 +37,17 @@ class Machine_test(Machine):
         }
 
 machine = Machine_test()
-input_string = "ADD R1, [R2], 0x1 :label sysname()"
 input_string = """
 #comment
 :label
-ADD A B
-PUSH C
-SYS write() C
-LDM A [i]
-IMM A :label
-J_Z A
+    ADD A B
+    PUSH C
+    SYS write() C
+    LDM A [i]
+    IMM A :label
+    J_ZA A
 """
 
-#TODOLIST:
-#refactor label logic
-#refactor error reporting
-#implement linker
-
 assembler = Assembler(machine)
-try:
-    ret = assembler.assemble(input_string)
-except Exception as e:
-    print("!"*20)
-    print(e)
+ret = assembler.assemble(input_string)
 

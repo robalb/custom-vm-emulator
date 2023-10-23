@@ -410,7 +410,7 @@ class Assembler:
                     found = True
                     ret |= k
             if not found:
-                raise Exception(f"invalid pseudo JMP Flaf: {f}")
+                raise Exception(f"invalid pseudo JMP Flag: {f}")
         return ret
 
     def sysname_to_byte(self, str):
